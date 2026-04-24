@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cyberday · 评比系统</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--navy:#1A3A5C;--blue:#378ADD;--teal:#1D9E75;--amber:#EF9F27;--red:#E24B4A;--bg:#F8F8F6;--card:#fff;--border:#E0DED6;--text:#1a1a18;--muted:#6B6A65}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
+#loading{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;gap:16px}
+.spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--navy);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#loading p{font-size:13px;color:var(--muted)}
+#error-page{display:none;flex-direction:column;align-items:center;justify-content:center;height:100vh;gap:14px;padding:24px;text-align:center}
+#error-page h2{font-size:18px;font-weight:600}
+#error-page p{font-size:13px;color:var(--muted);line-height:1.6;max-width:340px}
+.err-icon{width:56px;height:56px;border-radius:50%;background:#FFEEED;display:flex;align-items:center;justify-content:center}
+#vote-page{display:none;min-height:100vh;padding-bottom:80px}
+.top-bar{background:var(--navy);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;position:sticky;top:0;z-index:10}
+.top-bar .event{font-size:12px;color:rgba(255,255,255,.55)}
+.top-bar .user-info{display:flex;align-items:center;gap:8px}
+.top-bar .uname{font-size:14px;font-weight:600;color:#fff}
+.role-pill{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:500}
+.role-pill.mgmt{background:rgba(55,138,221,.3);color:#9FCAEE}
+.role-pill.public{background:rgba(29,158,117,.25);color:#7FD4B5}
+.page-body{max-width:1100px;margin:0 auto;padding:20px 16px}
+.summary-bar{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 20px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.summary-bar h2{font-size:15px;font-weight:600;margin-bottom:3px}
+.summary-bar p{font-size:12px;color:var(--muted)}
+.vote-tally{display:flex;align-items:center;gap:8px}
+.tally-num{font-size:26px;font-weight:700;line-height:1}
+.tally-num.ok{color:var(--teal)}.tally-num.over{color:var(--red)}.tally-num.under{color:var(--amber)}
+.tally-label{font-size:12px;color:var(--muted);line-height:1.4}
+.table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:12px;background:var(--card);margin-bottom:16px}
+table{width:100%;border-collapse:collapse;min-width:880px}
+thead th{background:#EEF4FB;border-bottom:1px solid var(--border);padding:0;vertical-align:bottom;white-space:nowrap}
+.th-proj{text-align:left;padding:10px 16px;min-width:170px;border-right:1px solid var(--border);font-size:11px;font-weight:600;color:#0C447C}
+.th-dim{padding:8px 4px 10px;text-align:center;min-width:58px;border-right:1px solid var(--border)}
+.th-dim .dnum{font-size:9px;color:#888;margin-bottom:2px}
+.th-dim .dname{font-size:10px;font-weight:600;color:#1A3A5C;line-height:1.3}
+.th-votes{padding:10px 6px;text-align:center;min-width:62px;border-right:1px solid var(--border);font-size:10px;font-weight:600;color:#0C447C}
+.th-comment{padding:10px 10px;text-align:left;min-width:130px;font-size:10px;font-weight:600;color:#0C447C}
+tbody tr{border-bottom:1px solid var(--border)}
+tbody tr:last-child{border-bottom:none}
+tbody tr:nth-child(even) td{background:#FAFAF9}
+tbody tr:hover td{background:#EEF4FB}
+tbody tr.row-err td{background:#FFF5F5!important}
+.td-proj{padding:10px 16px;border-right:1px solid var(--border);vertical-align:middle}
+.td-proj .pnum{font-size:10px;color:var(--muted);margin-bottom:1px}
+.td-proj .pname{font-size:12px;font-weight:500;line-height:1.4}
+.td-dim{text-align:center;border-right:1px solid var(--border);vertical-align:middle;padding:8px 3px}
+.td-votes{text-align:center;border-right:1px solid var(--border);vertical-align:middle;padding:8px 5px}
+.td-comment{vertical-align:middle;padding:8px 8px}
+.dot{width:24px;height:24px;border-radius:50%;border:2px solid #C8C6BE;background:transparent;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:all .12s}
+.dot:hover{border-color:var(--blue);background:#EEF4FB}
+.dot.on{background:var(--navy);border-color:var(--navy)}
+.dot.on::after{content:'';width:9px;height:9px;border-radius:50%;background:#fff;display:block}
+.vinp{width:50px;height:30px;text-align:center;font-size:14px;font-weight:600;border:1.5px solid var(--border);border-radius:8px;background:#fff;color:var(--text)}
+.vinp:focus{outline:none;border-color:var(--blue)}
+.vinp.err{border-color:var(--red);background:#FFF5F5;color:var(--red)}
+.vinp.filled{background:#FAEEDA;border-color:#EF9F27;color:#7A4F00}
+.cinp{width:100%;min-height:36px;font-size:12px;border:1.5px solid var(--border);border-radius:8px;background:#fff;color:var(--text);padding:5px 8px;resize:vertical;line-height:1.5;font-family:inherit}
+.cinp:focus{outline:none;border-color:var(--blue)}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--muted);align-items:center;margin-bottom:4px}
+.leg-item{display:flex;align-items:center;gap:6px}
+.leg-dot-off{width:16px;height:16px;border-radius:50%;border:2px solid #C8C6BE}
+.leg-dot-on{width:16px;height:16px;border-radius:50%;background:var(--navy)}
+.leg-box{width:30px;height:16px;border-radius:4px}
+.bottom-bar{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--border);padding:12px 24px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;box-shadow:0 -2px 12px rgba(0,0,0,.07);z-index:10}
+.v-status{font-size:13px}
+.v-status.ok{color:var(--teal);font-weight:500}
+.v-status.err{color:var(--red);font-weight:500}
+.v-status.warn{color:var(--amber)}
+.sub-btn{padding:10px 32px;font-size:14px;font-weight:600;border-radius:10px;border:none;cursor:pointer;background:var(--navy);color:#fff}
+.sub-btn:hover:not(:disabled){background:#142d47}
+.sub-btn:disabled{background:#C8C6BE;cursor:not-allowed}
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;align-items:center;justify-content:center}
+.overlay.show{display:flex}
+.modal{background:var(--card);border-radius:16px;padding:28px;max-width:400px;width:92%;text-align:center}
+.modal h3{font-size:17px;font-weight:600;margin-bottom:10px}
+.modal p{font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:24px}
+.modal-btns{display:flex;gap:10px;justify-content:center}
+.modal-btns button{padding:10px 26px;font-size:13px;font-weight:500;border-radius:10px;cursor:pointer;border:1.5px solid var(--border)}
+.btn-back{background:#fff;color:var(--text)}
+.btn-ok{background:var(--navy);color:#fff;border-color:var(--navy)}
+#done-page{display:none;flex-direction:column;align-items:center;justify-content:center;height:100vh;gap:16px;padding:24px;text-align:center}
+.done-icon{width:68px;height:68px;border-radius:50%;background:#E1F5EE;display:flex;align-items:center;justify-content:center}
+#done-page h2{font-size:20px;font-weight:600}
+#done-page p{font-size:13px;color:var(--muted);line-height:1.6;max-width:340px}
+#admin-page{display:none}
+.admin-topbar{background:var(--navy);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.admin-topbar h1{font-size:15px;font-weight:600;color:#fff}
+.admin-topbar .asub{font-size:11px;color:rgba(255,255,255,.5);margin-top:2px}
+.tbtn{display:inline-flex;align-items:center;gap:6px;padding:7px 16px;font-size:12px;font-weight:500;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.1);color:#fff;cursor:pointer}
+.tbtn.primary{background:#fff;color:var(--navy);border-color:#fff}
+.wrap{max-width:1200px;margin:0 auto;padding:20px 16px 60px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.stat{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 16px}
+.stat .slabel{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:6px}
+.stat .sval{font-size:26px;font-weight:700}
+.stat.ok .sval{color:var(--teal)}.stat.warn .sval{color:var(--amber)}.stat.info .sval{color:var(--navy)}
+.sec{background:var(--card);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;overflow:hidden}
+.sec-head{padding:12px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.sec-head h2{font-size:14px;font-weight:600}
+.sec-head .meta{font-size:12px;color:var(--muted)}
+.prog-table{width:100%;border-collapse:collapse}
+.prog-table th{font-size:11px;font-weight:500;color:var(--muted);padding:8px 16px;text-align:left;border-bottom:1px solid var(--border);background:#FAFAF8}
+.prog-table td{padding:10px 16px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle}
+.prog-table tr:last-child td{border-bottom:none}
+.badge{display:inline-block;font-size:11px;padding:3px 10px;border-radius:20px;font-weight:500}
+.badge.done{background:#E1F5EE;color:#085041}.badge.pending{background:#FAEEDA;color:#7A4F00}
+.rtag{display:inline-block;font-size:11px;padding:2px 8px;border-radius:4px;font-weight:500}
+.rtag.mgmt{background:#E6F1FB;color:#0C447C}.rtag.public{background:#F1EFE8;color:#3B3A35}
+.res-wrap{overflow-x:auto}
+.res-table{width:100%;border-collapse:collapse;min-width:780px}
+.res-table th{font-size:11px;font-weight:500;color:var(--muted);padding:8px 10px;text-align:center;border-bottom:1px solid var(--border);background:#FAFAF8;white-space:nowrap}
+.res-table th.left{text-align:left;padding-left:16px}
+.res-table td{padding:9px 10px;border-bottom:1px solid var(--border);font-size:12px;text-align:center;vertical-align:middle}
+.res-table td.left{text-align:left;padding-left:16px;font-weight:500}
+.res-table tr:last-child td{border-bottom:none}
+.res-table tr.top3 td{background:#FFFBF0}
+.rank-circle{width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;background:var(--border);color:var(--muted)}
+.rank-circle.gold{background:#FAEEDA;color:#7A4F00}.rank-circle.silver{background:#F0F0EE;color:#555}.rank-circle.bronze{background:#FDEEE6;color:#7A3A1A}
+.fscore{font-size:17px;font-weight:700}
+.sbar-wrap{height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-top:3px;width:80px;display:inline-block}
+.sbar-fill{height:100%;border-radius:2px;background:var(--blue)}
+</style>
+</head>
+<body>
+
+<div id="loading"><div class="spinner"></div><p>正在加载…</p></div>
+
+<div id="error-page">
+  <div class="err-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#E24B4A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
+  <h2 id="err-title">链接无效</h2>
+  <p id="err-desc">此链接无法使用，请联系管理员获取正确的评分链接。</p>
+</div>
+
+<div id="vote-page">
+  <div class="top-bar">
+    <div class="event">Cyberday · AI 课题阶段成果展示日 · 2026.04.28</div>
+    <div class="user-info"><span class="uname" id="disp-name"></span><span class="role-pill" id="disp-role"></span></div>
+  </div>
+  <div class="page-body">
+    <div class="summary-bar">
+      <div><h2>评比打分表</h2><p>逐项点选维度表现突出的课题，并将 5 票分配给你认为最佳的课题组</p></div>
+      <div class="vote-tally"><div><div class="tally-num" id="tally-num">0</div><div class="tally-label">已分配票数<br>/ 5 票</div></div></div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th class="th-proj">课题组</th>
+          <th class="th-dim"><div class="dnum">01</div><div class="dname">方向<br>契合度</div></th>
+          <th class="th-dim"><div class="dnum">02</div><div class="dname">方案<br>创新性</div></th>
+          <th class="th-dim"><div class="dnum">03</div><div class="dname">系统<br>体系性</div></th>
+          <th class="th-dim"><div class="dnum">04</div><div class="dname">落地<br>可行性</div></th>
+          <th class="th-dim"><div class="dnum">05</div><div class="dname">ROI<br>预期</div></th>
+          <th class="th-dim"><div class="dnum">06</div><div class="dname">长远<br>可持续</div></th>
+          <th class="th-dim"><div class="dnum">07</div><div class="dname">进展<br>质量</div></th>
+          <th class="th-dim"><div class="dnum">08</div><div class="dname">目标<br>清晰度</div></th>
+          <th class="th-votes">得票数<br><span style="font-size:9px;font-weight:400;color:#888">0–5</span></th>
+          <th class="th-comment">评语（选填）</th>
+        </tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <div class="legend">
+      <div class="leg-item"><div class="leg-dot-off"></div>未选</div>
+      <div class="leg-item"><div class="leg-dot-on"></div>已选</div>
+      <div class="leg-item"><div class="leg-box" style="background:#FAEEDA;border:1.5px solid #EF9F27"></div>已填票数</div>
+      <div class="leg-item"><div class="leg-box" style="background:#FFF5F5;border:1.5px solid #E24B4A"></div>票数超限</div>
+    </div>
+  </div>
+  <div class="bottom-bar">
+    <span class="v-status" id="status-txt">总票数须等于 5，请继续填写</span>
+    <button class="sub-btn" id="sub-btn" disabled onclick="askConfirm()">提交评分</button>
+  </div>
+</div>
+
+<div class="overlay" id="modal">
+  <div class="modal">
+    <h3>确认提交评分？</h3>
+    <p>提交后将无法修改。请确认所有评分和票数分配均已填写完毕。</p>
+    <div class="modal-btns">
+      <button class="btn-back" onclick="closeModal()">返回修改</button>
+      <button class="btn-ok" onclick="doSubmit()">确认提交</button>
+    </div>
+  </div>
+</div>
+
+<div id="done-page">
+  <div class="done-icon"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#1D9E75" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+  <h2>评分已提交</h2>
+  <p id="done-sub">感谢参与，评比结果将在当晚统计后另行通知。</p>
+</div>
+
+<div id="admin-page">
+  <div class="admin-topbar">
+    <div><h1>Cyberday 管理后台</h1><div class="asub">AI 课题阶段成果展示日 · 2026.04.28</div></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="tbtn" onclick="doLoadAll()">↻ 刷新</button>
+      <button class="tbtn primary" onclick="doExportCSV()">↓ 导出 CSV 明细</button>
+    </div>
+  </div>
+  <div class="wrap">
+    <div class="stats">
+      <div class="stat info"><div class="slabel">总评审人数</div><div class="sval" id="s-total">—</div></div>
+      <div class="stat ok"><div class="slabel">已提交</div><div class="sval" id="s-done">—</div></div>
+      <div class="stat warn"><div class="slabel">未提交</div><div class="sval" id="s-pend">—</div></div>
+      <div class="stat"><div class="slabel">提交率</div><div class="sval" id="s-rate">—</div></div>
+    </div>
+    <div class="sec">
+      <div class="sec-head"><h2>提交进度</h2><span class="meta" id="refresh-time"></span></div>
+      <table class="prog-table">
+        <thead><tr><th>#</th><th>姓名</th><th>角色</th><th>状态</th><th>提交时间</th></tr></thead>
+        <tbody id="prog-body"><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">加载中…</td></tr></tbody>
+      </table>
+    </div>
+    <div class="sec">
+      <div class="sec-head"><h2>评比结果汇总</h2><span class="meta">综合得分 = 维度打分×70% + 得票×30% · 统筹60% + 群众40%</span></div>
+      <div class="res-wrap">
+        <table class="res-table">
+          <thead><tr>
+            <th style="width:40px">排名</th><th class="left">课题组</th>
+            <th>维度分<br><small>统筹</small></th><th>维度分<br><small>群众</small></th>
+            <th>得票<br><small>统筹</small></th><th>得票<br><small>群众</small></th>
+            <th style="min-width:100px">综合得分</th>
+          </tr></thead>
+          <tbody id="res-body"><tr><td colspan="7" style="text-align:center;padding:30px;color:var(--muted)">等待数据…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+const SUPA_URL='https://ahodjgiqlrvnpptgxdxx.supabase.co';
+const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFob2RqZ2lxbHJ2bnBwdGd4ZHh4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzMjMyMzAsImV4cCI6MjA5MTg5OTIzMH0.tZN6GM9pIGT8v2f8Agz-CA23gZ5AkHyETgnTc3EYq6w';
+const ADMIN_KEY='cyberday2026test';
+const PROJECTS=['会议助理-Agent','需求调研 Agent AI','全栈技术整合与效能提升','AI 程序员 Agent','系统架构升级','运维提效闭环','AI-first 交付体系','电商 RPA 自动化','AI 实战全栈开发与效能提升','TPM 项目 - AI 提效','数据清洗与报表','归因分析试点','AI 自动生成移动应用开发','自动测试','技术规范与支持'];
+const N=15,DIMS=8,MAX_VOTES=5;
+const sb=createClient(SUPA_URL,SUPA_KEY);
+const params=new URLSearchParams(location.search);
+const TOKEN=params.get('token'),AKEY=params.get('key');
+const $=id=>document.getElementById(id);
+const hide=id=>{$(id).style.display='none'};
+const show=(id,t='block')=>{$(id).style.display=t};
+const showErr=(t,d)=>{hide('loading');show('error-page','flex');$('err-title').textContent=t;$('err-desc').textContent=d};
+
+let voter=null,dots=Array.from({length:N},()=>Array(DIMS).fill(false)),votes=Array(N).fill(0),cmts=Array(N).fill(''),saveTimer=null;
+let allVoters=[],allScores=[];
+
+// ── ADMIN FUNCTIONS ──
+async function loadAll(){
+  const[{data:voters},{data:scores}]=await Promise.all([sb.from('voters').select('*').order('created_at'),sb.from('scores').select('*')]);
+  allVoters=voters||[];allScores=scores||[];
+  const done=allVoters.filter(v=>v.submitted).length,total=allVoters.length;
+  $('s-total').textContent=total;$('s-done').textContent=done;$('s-pend').textContent=total-done;$('s-rate').textContent=total?Math.round(done/total*100)+'%':'0%';
+  $('prog-body').innerHTML=allVoters.map((v,i)=>`<tr><td style="color:var(--muted)">${i+1}</td><td style="font-weight:500">${v.name}</td><td><span class="rtag ${v.role}">${v.role_label}</span></td><td><span class="badge ${v.submitted?'done':'pending'}">${v.submitted?'已提交':'未提交'}</span></td><td style="color:var(--muted);font-size:12px">${v.submitted_at?new Date(v.submitted_at).toLocaleString('zh-CN'):'—'}</td></tr>`).join('');
+  const mg=allVoters.filter(v=>v.role==='mgmt'&&v.submitted),pb=allVoters.filter(v=>v.role==='public'&&v.submitted);
+  const results=PROJECTS.map((name,i)=>{
+    const pid=i+1,mS=allScores.filter(s=>s.project_id===pid&&mg.find(v=>v.token===s.voter_token)),pS=allScores.filter(s=>s.project_id===pid&&pb.find(v=>v.token===s.voter_token));
+    const dp=arr=>arr.length===0?0:arr.reduce((s,r)=>s+[r.dim_01,r.dim_02,r.dim_03,r.dim_04,r.dim_05,r.dim_06,r.dim_07,r.dim_08].filter(Boolean).length,0)/(arr.length*8);
+    const vp=(arr,vts)=>vts.length===0?0:arr.reduce((s,r)=>s+(r.votes||0),0)/(vts.length*5);
+    const wD=(dp(mS)*0.6+dp(pS)*0.4)*100,wV=(vp(mS,mg)*0.6+vp(pS,pb)*0.4)*100;
+    return{name,mDim:Math.round(dp(mS)*100),pDim:Math.round(dp(pS)*100),mVote:mS.reduce((s,r)=>s+(r.votes||0),0),pVote:pS.reduce((s,r)=>s+(r.votes||0),0),score:Math.round((wD*0.7+wV*0.3)*10)/10};
+  });
+  results.sort((a,b)=>b.score-a.score);const maxS=results[0]?.score||1;
+  const rc=r=>r===0?'gold':r===1?'silver':r===2?'bronze':'';
+  $('res-body').innerHTML=results.map((r,rank)=>`<tr${rank<3?' class="top3"':''}><td><span class="rank-circle ${rc(rank)}">${rank+1}</span></td><td class="left">${r.name}</td><td>${r.mDim>0?r.mDim+'%':'—'}</td><td>${r.pDim>0?r.pDim+'%':'—'}</td><td>${r.mVote}</td><td>${r.pVote}</td><td><div class="fscore">${r.score>0?r.score.toFixed(1):'—'}</div><div class="sbar-wrap"><div class="sbar-fill" style="width:${maxS>0?Math.round(r.score/maxS*100):0}%"></div></div></td></tr>`).join('');
+  $('refresh-time').textContent='最后刷新：'+new Date().toLocaleTimeString('zh-CN');
+}
+
+function exportCSV(){
+  if(!allScores.length){alert('暂无数据');return;}
+  const dims=['方向契合度','方案创新性','系统体系性','落地可行性','ROI预期','长远可持续','进展质量','目标清晰度'];
+  const hdrs=['姓名','角色','课题组','课题序号',...dims,'得票数','评语','提交时间'];
+  const rows=[];
+  allVoters.filter(v=>v.submitted).forEach(voter=>{allScores.filter(s=>s.voter_token===voter.token).forEach(s=>{rows.push([voter.name,voter.role_label,PROJECTS[s.project_id-1],s.project_id,s.dim_01?1:0,s.dim_02?1:0,s.dim_03?1:0,s.dim_04?1:0,s.dim_05?1:0,s.dim_06?1:0,s.dim_07?1:0,s.dim_08?1:0,s.votes||0,(s.comment||'').replace(/,/g,'，').replace(/\n/g,' '),voter.submitted_at?new Date(voter.submitted_at).toLocaleString('zh-CN'):'']);});});
+  const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(new Blob(['\uFEFF'+[hdrs,...rows].map(r=>r.join(',')).join('\n')],{type:'text/csv;charset=utf-8'})),download:`cyberday_scores_${Date.now()}.csv`});
+  a.click();
+}
+
+// expose to global scope for onclick
+window.doLoadAll = loadAll;
+window.doExportCSV = exportCSV;
+
+// ── VOTE FUNCTIONS ──
+async function initVote(){
+  const{data:v,error}=await sb.from('voters').select('*').eq('token',TOKEN).single();
+  if(error||!v){showErr('链接无效','此链接不存在或已过期，请联系管理员重新获取。');return;}
+  if(v.submitted){hide('loading');show('done-page','flex');$('done-sub').textContent=`你已于 ${new Date(v.submitted_at).toLocaleString('zh-CN')} 完成提交，感谢参与。`;return;}
+  try{
+    const ip=(await fetch('https://api.ipify.org?format=json').then(r=>r.json())).ip;
+    const h=btoa(ip).slice(0,20);
+    if(v.ip_hash&&v.ip_hash!==h){showErr('链接已被使用','此链接已在其他设备上打开，每个链接仅限本人使用。如有问题请联系管理员。');return;}
+    if(!v.ip_hash)await sb.from('voters').update({ip_hash:h}).eq('token',TOKEN);
+  }catch(e){}
+  voter=v;
+  const{data:saved}=await sb.from('scores').select('*').eq('voter_token',TOKEN);
+  if(saved?.length)saved.forEach(s=>{const i=s.project_id-1;dots[i]=[s.dim_01,s.dim_02,s.dim_03,s.dim_04,s.dim_05,s.dim_06,s.dim_07,s.dim_08];votes[i]=s.votes||0;cmts[i]=s.comment||'';});
+  $('disp-name').textContent=v.name;
+  const rp=$('disp-role');rp.textContent=v.role_label;rp.className='role-pill '+v.role;
+  buildTable();hide('loading');show('vote-page');updateStatus();
+}
+
+function buildTable(){
+  $('tbody').innerHTML=PROJECTS.map((name,i)=>`
+    <tr id="r${i}">
+      <td class="td-proj"><div class="pnum">${String(i+1).padStart(2,'0')}</div><div class="pname">${name}</div></td>
+      ${Array(DIMS).fill(0).map((_,d)=>`<td class="td-dim"><div class="dot${dots[i][d]?' on':''}" id="dot${i}_${d}" onclick="toggle(${i},${d})"></div></td>`).join('')}
+      <td class="td-votes"><input class="vinp${votes[i]>0?' filled':''}" id="vi${i}" type="number" min="0" max="5" step="1" value="${votes[i]||''}" placeholder="—" oninput="onVote(${i},this.value)"></td>
+      <td class="td-comment"><textarea class="cinp" id="ci${i}" placeholder="评语（选填）…" oninput="onCmt(${i},this.value)">${cmts[i]}</textarea></td>
+    </tr>`).join('');
+}
+
+function updateRowStyle(i){const inp=$('vi'+i),row=$('r'+i),over=votes[i]>MAX_VOTES;inp.className='vinp'+(over?' err':votes[i]>0?' filled':'');row.className=over?'row-err':'';}
+function updateStatus(){
+  const used=votes.reduce((s,v)=>s+v,0);
+  const tn=$('tally-num'),st=$('status-txt'),btn=$('sub-btn');
+  Array.from({length:N},(_,i)=>updateRowStyle(i));
+  tn.textContent=used;tn.className='tally-num '+(used===MAX_VOTES?'ok':used>MAX_VOTES?'over':'under');
+  if(used===MAX_VOTES){st.textContent='票数已满，可以提交';st.className='v-status ok';btn.disabled=false;}
+  else if(used>MAX_VOTES){st.textContent=`票数超出 ${used-MAX_VOTES} 票，请调整后再提交`;st.className='v-status err';btn.disabled=true;}
+  else{st.textContent=`还差 ${MAX_VOTES-used} 票，总票数须等于 5`;st.className='v-status warn';btn.disabled=true;}
+}
+function scheduleSave(){clearTimeout(saveTimer);saveTimer=setTimeout(saveDraft,1500);}
+async function saveDraft(){
+  if(!voter)return;
+  await sb.from('scores').upsert(PROJECTS.map((_,i)=>({voter_token:voter.token,project_id:i+1,dim_01:dots[i][0],dim_02:dots[i][1],dim_03:dots[i][2],dim_04:dots[i][3],dim_05:dots[i][4],dim_06:dots[i][5],dim_07:dots[i][6],dim_08:dots[i][7],votes:votes[i],comment:cmts[i],updated_at:new Date().toISOString()})),{onConflict:'voter_token,project_id'});
+}
+
+// expose to global
+window.toggle=(i,d)=>{dots[i][d]=!dots[i][d];$(`dot${i}_${d}`).className='dot'+(dots[i][d]?' on':'');scheduleSave();};
+window.onVote=(i,v)=>{const val=v===''?0:Math.max(0,parseInt(v)||0);votes[i]=val;if(v!=='')$('vi'+i).value=val;updateRowStyle(i);updateStatus();scheduleSave();};
+window.onCmt=(i,v)=>{cmts[i]=v;scheduleSave();};
+window.askConfirm=()=>{if(votes.reduce((s,v)=>s+v,0)!==MAX_VOTES)return;$('modal').classList.add('show');};
+window.closeModal=()=>$('modal').classList.remove('show');
+window.doSubmit=async()=>{
+  closeModal();const btn=$('sub-btn');btn.disabled=true;btn.textContent='提交中…';
+  await saveDraft();
+  const{error}=await sb.from('voters').update({submitted:true,submitted_at:new Date().toISOString()}).eq('token',voter.token);
+  if(error){btn.disabled=false;btn.textContent='提交评分';alert('提交失败，请重试');return;}
+  hide('vote-page');show('done-page','flex');
+};
+
+// ── ROUTER ──
+if(AKEY===ADMIN_KEY){
+  hide('loading');show('admin-page');
+  loadAll();setInterval(loadAll,60000);
+}else if(TOKEN){
+  initVote();
+}else{
+  showErr('链接无效','未检测到评分令牌，请使用管理员发放的专属链接。');
+}
+</script>
+</body>
+</html>
