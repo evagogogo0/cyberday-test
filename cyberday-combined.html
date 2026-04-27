@@ -199,8 +199,8 @@ tbody tr.row-err td{background:#FFF5F5!important}
   <div class="admin-topbar">
     <div><h1>Cyberday 管理后台</h1><div class="asub">AI 课题阶段成果展示日 · 2026.04.28</div></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="tbtn" onclick="loadAll()">↻ 刷新</button>
-      <button class="tbtn primary" onclick="exportCSV()">↓ 导出 CSV 明细</button>
+      <button class="tbtn" onclick="doLoadAll()">↻ 刷新</button>
+      <button class="tbtn primary" onclick="doExportCSV()">↓ 导出 CSV 明细</button>
     </div>
   </div>
   <div class="wrap">
@@ -237,7 +237,7 @@ tbody tr.row-err td{background:#FFF5F5!important}
 <script type="module">
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const SUPA_URL='https://ahodjgiqlrvnpptgxdxx.supabase.co';
-const SUPA_KEY='sb_publishable_3k750hVr2-_reIuzqb3fYg_GHZfE05y';
+const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFob2RqZ2lxbHJ2bnBwdGd4ZHh4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzMjMyMzAsImV4cCI6MjA5MTg5OTIzMH0.tZN6GM9pIGT8v2f8Agz-CA23gZ5AkHyETgnTc3EYq6w';
 const ADMIN_KEY='cyberday2026test';
 const PROJECTS=['会议助理-Agent','需求调研 Agent AI','全栈技术整合与效能提升','AI 程序员 Agent','系统架构升级','运维提效闭环','AI-first 交付体系','电商 RPA 自动化','AI 实战全栈开发与效能提升','TPM 项目 - AI 提效','数据清洗与报表','归因分析试点','AI 自动生成移动应用开发','自动测试','技术规范与支持'];
 const N=15,DIMS=8,MAX_VOTES=5;
@@ -249,12 +249,45 @@ const hide=id=>{$(id).style.display='none'};
 const show=(id,t='block')=>{$(id).style.display=t};
 const showErr=(t,d)=>{hide('loading');show('error-page','flex');$('err-title').textContent=t;$('err-desc').textContent=d};
 
-if(AKEY===ADMIN_KEY){hide('loading');show('admin-page');loadAll();setInterval(loadAll,60000);}
-else if(TOKEN){initVote();}
-else{showErr('链接无效','未检测到评分令牌，请使用管理员发放的专属链接。');}
-
 let voter=null,dots=Array.from({length:N},()=>Array(DIMS).fill(false)),votes=Array(N).fill(0),cmts=Array(N).fill(''),saveTimer=null;
+let allVoters=[],allScores=[];
 
+// ── ADMIN FUNCTIONS ──
+async function loadAll(){
+  const[{data:voters},{data:scores}]=await Promise.all([sb.from('voters').select('*').order('created_at'),sb.from('scores').select('*')]);
+  allVoters=voters||[];allScores=scores||[];
+  const done=allVoters.filter(v=>v.submitted).length,total=allVoters.length;
+  $('s-total').textContent=total;$('s-done').textContent=done;$('s-pend').textContent=total-done;$('s-rate').textContent=total?Math.round(done/total*100)+'%':'0%';
+  $('prog-body').innerHTML=allVoters.map((v,i)=>`<tr><td style="color:var(--muted)">${i+1}</td><td style="font-weight:500">${v.name}</td><td><span class="rtag ${v.role}">${v.role_label}</span></td><td><span class="badge ${v.submitted?'done':'pending'}">${v.submitted?'已提交':'未提交'}</span></td><td style="color:var(--muted);font-size:12px">${v.submitted_at?new Date(v.submitted_at).toLocaleString('zh-CN'):'—'}</td></tr>`).join('');
+  const mg=allVoters.filter(v=>v.role==='mgmt'&&v.submitted),pb=allVoters.filter(v=>v.role==='public'&&v.submitted);
+  const results=PROJECTS.map((name,i)=>{
+    const pid=i+1,mS=allScores.filter(s=>s.project_id===pid&&mg.find(v=>v.token===s.voter_token)),pS=allScores.filter(s=>s.project_id===pid&&pb.find(v=>v.token===s.voter_token));
+    const dp=arr=>arr.length===0?0:arr.reduce((s,r)=>s+[r.dim_01,r.dim_02,r.dim_03,r.dim_04,r.dim_05,r.dim_06,r.dim_07,r.dim_08].filter(Boolean).length,0)/(arr.length*8);
+    const vp=(arr,vts)=>vts.length===0?0:arr.reduce((s,r)=>s+(r.votes||0),0)/(vts.length*5);
+    const wD=(dp(mS)*0.6+dp(pS)*0.4)*100,wV=(vp(mS,mg)*0.6+vp(pS,pb)*0.4)*100;
+    return{name,mDim:Math.round(dp(mS)*100),pDim:Math.round(dp(pS)*100),mVote:mS.reduce((s,r)=>s+(r.votes||0),0),pVote:pS.reduce((s,r)=>s+(r.votes||0),0),score:Math.round((wD*0.7+wV*0.3)*10)/10};
+  });
+  results.sort((a,b)=>b.score-a.score);const maxS=results[0]?.score||1;
+  const rc=r=>r===0?'gold':r===1?'silver':r===2?'bronze':'';
+  $('res-body').innerHTML=results.map((r,rank)=>`<tr${rank<3?' class="top3"':''}><td><span class="rank-circle ${rc(rank)}">${rank+1}</span></td><td class="left">${r.name}</td><td>${r.mDim>0?r.mDim+'%':'—'}</td><td>${r.pDim>0?r.pDim+'%':'—'}</td><td>${r.mVote}</td><td>${r.pVote}</td><td><div class="fscore">${r.score>0?r.score.toFixed(1):'—'}</div><div class="sbar-wrap"><div class="sbar-fill" style="width:${maxS>0?Math.round(r.score/maxS*100):0}%"></div></div></td></tr>`).join('');
+  $('refresh-time').textContent='最后刷新：'+new Date().toLocaleTimeString('zh-CN');
+}
+
+function exportCSV(){
+  if(!allScores.length){alert('暂无数据');return;}
+  const dims=['方向契合度','方案创新性','系统体系性','落地可行性','ROI预期','长远可持续','进展质量','目标清晰度'];
+  const hdrs=['姓名','角色','课题组','课题序号',...dims,'得票数','评语','提交时间'];
+  const rows=[];
+  allVoters.filter(v=>v.submitted).forEach(voter=>{allScores.filter(s=>s.voter_token===voter.token).forEach(s=>{rows.push([voter.name,voter.role_label,PROJECTS[s.project_id-1],s.project_id,s.dim_01?1:0,s.dim_02?1:0,s.dim_03?1:0,s.dim_04?1:0,s.dim_05?1:0,s.dim_06?1:0,s.dim_07?1:0,s.dim_08?1:0,s.votes||0,(s.comment||'').replace(/,/g,'，').replace(/\n/g,' '),voter.submitted_at?new Date(voter.submitted_at).toLocaleString('zh-CN'):'']);});});
+  const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(new Blob(['\uFEFF'+[hdrs,...rows].map(r=>r.join(',')).join('\n')],{type:'text/csv;charset=utf-8'})),download:`cyberday_scores_${Date.now()}.csv`});
+  a.click();
+}
+
+// expose to global scope for onclick
+window.doLoadAll = loadAll;
+window.doExportCSV = exportCSV;
+
+// ── VOTE FUNCTIONS ──
 async function initVote(){
   const{data:v,error}=await sb.from('voters').select('*').eq('token',TOKEN).single();
   if(error||!v){showErr('链接无效','此链接不存在或已过期，请联系管理员重新获取。');return;}
@@ -283,10 +316,6 @@ function buildTable(){
     </tr>`).join('');
 }
 
-window.toggle=(i,d)=>{dots[i][d]=!dots[i][d];$(`dot${i}_${d}`).className='dot'+(dots[i][d]?' on':'');scheduleSave();};
-window.onVote=(i,v)=>{const val=v===''?0:Math.max(0,parseInt(v)||0);votes[i]=val;if(v!=='')$('vi'+i).value=val;updateRowStyle(i);updateStatus();scheduleSave();};
-window.onCmt=(i,v)=>{cmts[i]=v;scheduleSave();};
-
 function updateRowStyle(i){const inp=$('vi'+i),row=$('r'+i),over=votes[i]>MAX_VOTES;inp.className='vinp'+(over?' err':votes[i]>0?' filled':'');row.className=over?'row-err':'';}
 function updateStatus(){
   const used=votes.reduce((s,v)=>s+v,0);
@@ -302,6 +331,11 @@ async function saveDraft(){
   if(!voter)return;
   await sb.from('scores').upsert(PROJECTS.map((_,i)=>({voter_token:voter.token,project_id:i+1,dim_01:dots[i][0],dim_02:dots[i][1],dim_03:dots[i][2],dim_04:dots[i][3],dim_05:dots[i][4],dim_06:dots[i][5],dim_07:dots[i][6],dim_08:dots[i][7],votes:votes[i],comment:cmts[i],updated_at:new Date().toISOString()})),{onConflict:'voter_token,project_id'});
 }
+
+// expose to global
+window.toggle=(i,d)=>{dots[i][d]=!dots[i][d];$(`dot${i}_${d}`).className='dot'+(dots[i][d]?' on':'');scheduleSave();};
+window.onVote=(i,v)=>{const val=v===''?0:Math.max(0,parseInt(v)||0);votes[i]=val;if(v!=='')$('vi'+i).value=val;updateRowStyle(i);updateStatus();scheduleSave();};
+window.onCmt=(i,v)=>{cmts[i]=v;scheduleSave();};
 window.askConfirm=()=>{if(votes.reduce((s,v)=>s+v,0)!==MAX_VOTES)return;$('modal').classList.add('show');};
 window.closeModal=()=>$('modal').classList.remove('show');
 window.doSubmit=async()=>{
@@ -312,40 +346,15 @@ window.doSubmit=async()=>{
   hide('vote-page');show('done-page','flex');
 };
 
-let allVoters=[],allScores=[];
-window.loadAll=async()=>{
-  const[{data:voters},{data:scores}]=await Promise.all([sb.from('voters').select('*').order('created_at'),sb.from('scores').select('*')]);
-  allVoters=voters||[];allScores=scores||[];
-  renderProgress();renderResults();
-  $('refresh-time').textContent='最后刷新：'+new Date().toLocaleTimeString('zh-CN');
-};
-function renderProgress(){
-  const done=allVoters.filter(v=>v.submitted).length,total=allVoters.length;
-  $('s-total').textContent=total;$('s-done').textContent=done;$('s-pend').textContent=total-done;$('s-rate').textContent=total?Math.round(done/total*100)+'%':'0%';
-  $('prog-body').innerHTML=allVoters.map((v,i)=>`<tr><td style="color:var(--muted)">${i+1}</td><td style="font-weight:500">${v.name}</td><td><span class="rtag ${v.role}">${v.role_label}</span></td><td><span class="badge ${v.submitted?'done':'pending'}">${v.submitted?'已提交':'未提交'}</span></td><td style="color:var(--muted);font-size:12px">${v.submitted_at?new Date(v.submitted_at).toLocaleString('zh-CN'):'—'}</td></tr>`).join('');
+// ── ROUTER ──
+if(AKEY===ADMIN_KEY){
+  hide('loading');show('admin-page');
+  loadAll();setInterval(loadAll,60000);
+}else if(TOKEN){
+  initVote();
+}else{
+  showErr('链接无效','未检测到评分令牌，请使用管理员发放的专属链接。');
 }
-function renderResults(){
-  const mg=allVoters.filter(v=>v.role==='mgmt'&&v.submitted),pb=allVoters.filter(v=>v.role==='public'&&v.submitted);
-  const results=PROJECTS.map((name,i)=>{
-    const pid=i+1,mS=allScores.filter(s=>s.project_id===pid&&mg.find(v=>v.token===s.voter_token)),pS=allScores.filter(s=>s.project_id===pid&&pb.find(v=>v.token===s.voter_token));
-    const dp=arr=>arr.length===0?0:arr.reduce((s,r)=>s+[r.dim_01,r.dim_02,r.dim_03,r.dim_04,r.dim_05,r.dim_06,r.dim_07,r.dim_08].filter(Boolean).length,0)/(arr.length*8);
-    const vp=(arr,vts)=>vts.length===0?0:arr.reduce((s,r)=>s+(r.votes||0),0)/(vts.length*5);
-    const wD=(dp(mS)*0.6+dp(pS)*0.4)*100,wV=(vp(mS,mg)*0.6+vp(pS,pb)*0.4)*100;
-    return{name,mDim:Math.round(dp(mS)*100),pDim:Math.round(dp(pS)*100),mVote:mS.reduce((s,r)=>s+(r.votes||0),0),pVote:pS.reduce((s,r)=>s+(r.votes||0),0),score:Math.round((wD*0.7+wV*0.3)*10)/10};
-  });
-  results.sort((a,b)=>b.score-a.score);const maxS=results[0]?.score||1;
-  const rc=r=>r===0?'gold':r===1?'silver':r===2?'bronze':'';
-  $('res-body').innerHTML=results.map((r,rank)=>`<tr${rank<3?' class="top3"':''}><td><span class="rank-circle ${rc(rank)}">${rank+1}</span></td><td class="left">${r.name}</td><td>${r.mDim>0?r.mDim+'%':'—'}</td><td>${r.pDim>0?r.pDim+'%':'—'}</td><td>${r.mVote}</td><td>${r.pVote}</td><td><div class="fscore">${r.score>0?r.score.toFixed(1):'—'}</div><div class="sbar-wrap"><div class="sbar-fill" style="width:${maxS>0?Math.round(r.score/maxS*100):0}%"></div></div></td></tr>`).join('');
-}
-window.exportCSV=()=>{
-  if(!allScores.length){alert('暂无数据');return;}
-  const dims=['方向契合度','方案创新性','系统体系性','落地可行性','ROI预期','长远可持续','进展质量','目标清晰度'];
-  const hdrs=['姓名','角色','课题组','课题序号',...dims,'得票数','评语','提交时间'];
-  const rows=[];
-  allVoters.filter(v=>v.submitted).forEach(voter=>{allScores.filter(s=>s.voter_token===voter.token).forEach(s=>{rows.push([voter.name,voter.role_label,PROJECTS[s.project_id-1],s.project_id,s.dim_01?1:0,s.dim_02?1:0,s.dim_03?1:0,s.dim_04?1:0,s.dim_05?1:0,s.dim_06?1:0,s.dim_07?1:0,s.dim_08?1:0,s.votes||0,(s.comment||'').replace(/,/g,'，').replace(/\n/g,' '),voter.submitted_at?new Date(voter.submitted_at).toLocaleString('zh-CN'):'']);});});
-  const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(new Blob(['\uFEFF'+[hdrs,...rows].map(r=>r.join(',')).join('\n')],{type:'text/csv;charset=utf-8'})),download:`cyberday_scores_${Date.now()}.csv`});
-  a.click();
-};
 </script>
 </body>
 </html>
