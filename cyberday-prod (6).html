@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Cyberday 2026</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--navy:#1A3A5C;--blue:#378ADD;--teal:#1D9E75;--amber:#EF9F27;--red:#E24B4A;--bg:#F8F8F6;--card:#fff;--border:#E0DED6;--text:#1a1a18;--muted:#6B6A65}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",sans-serif;background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
+#loading{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;gap:16px}
+.spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--navy);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#loading p{font-size:13px;color:var(--muted)}
+.page{display:none;min-height:100vh}.page.active{display:block}
+.topbar{background:var(--navy);padding:14px 20px;position:sticky;top:0;z-index:50}
+.topbar h1{font-size:15px;font-weight:600;color:#fff}
+.topbar p{font-size:11px;color:rgba(255,255,255,.5);margin-top:2px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px;margin:16px}
+.card h2{font-size:16px;font-weight:600;margin-bottom:6px}
+.card p{font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:16px}
+.inp-wrap{position:relative;margin-bottom:12px}
+.inp{width:100%;height:48px;border:1.5px solid var(--border);border-radius:12px;padding:0 16px;font-size:15px;background:#fff;color:var(--text)}
+.inp:focus{outline:none;border-color:var(--blue)}
+.dropdown{position:absolute;top:52px;left:0;right:0;background:#fff;border:1.5px solid var(--border);border-radius:12px;max-height:220px;overflow-y:auto;z-index:100;box-shadow:0 8px 24px rgba(0,0,0,.12)}
+.dropdown-item{padding:12px 16px;font-size:14px;cursor:pointer;border-bottom:.5px solid var(--border)}
+.dropdown-item:last-child{border-bottom:none}
+.dropdown-item:hover{background:#EEF4FB;color:var(--navy)}
+.btn{width:100%;height:50px;border:none;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer}
+.btn-primary{background:var(--navy);color:#fff}
+.btn-primary:disabled{background:#C8C6BE;cursor:not-allowed}
+.success-icon{width:72px;height:72px;border-radius:50%;background:#E1F5EE;display:flex;align-items:center;justify-content:center;margin:0 auto 16px}
+.tag-inp{display:inline-flex;align-items:center;gap:6px;background:#EEF4FB;border:1.5px solid #B5D4F4;border-radius:20px;padding:4px 12px;font-size:12px;font-weight:500;color:#0C447C;margin-bottom:12px}
+.vote-topbar{background:var(--navy);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+.vote-topbar .uname{font-size:13px;font-weight:600;color:#fff}
+.role-pill{font-size:10px;padding:2px 8px;border-radius:20px;font-weight:500}
+.role-pill.mgmt{background:rgba(55,138,221,.3);color:#9FCAEE}
+.role-pill.public{background:rgba(29,158,117,.25);color:#7FD4B5}
+.vote-body{padding:12px 12px 100px}
+.summary-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 16px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between}
+.summary-card h2{font-size:14px;font-weight:600;margin-bottom:2px}
+.summary-card p{font-size:11px;color:var(--muted)}
+.tally{text-align:center}
+.tally-num{font-size:28px;font-weight:700;line-height:1}
+.tally-num.ok{color:var(--teal)}.tally-num.over{color:var(--red)}.tally-num.under{color:var(--amber)}
+.tally-label{font-size:11px;color:var(--muted)}
+.table-scroll{overflow-x:auto;border:1px solid var(--border);border-radius:12px;background:var(--card);margin-bottom:12px}
+table{width:100%;border-collapse:collapse;min-width:700px}
+thead th{background:#EEF4FB;border-bottom:1px solid var(--border);padding:0;vertical-align:bottom;white-space:nowrap;font-size:10px;font-weight:600;color:#0C447C}
+.th-proj{text-align:left;padding:9px 12px;min-width:140px;border-right:1px solid var(--border)}
+.th-dim{padding:7px 3px 9px;text-align:center;min-width:50px;border-right:1px solid var(--border)}
+.th-dim .dnum{font-size:8px;color:#888;margin-bottom:1px}
+.th-dim .dname{font-size:9px;line-height:1.3}
+.th-votes{padding:9px 4px;text-align:center;min-width:52px;border-right:1px solid var(--border)}
+.th-cmt{padding:9px 8px;text-align:left;min-width:100px;font-size:10px}
+tbody tr{border-bottom:1px solid var(--border)}
+tbody tr:last-child{border-bottom:none}
+tbody tr:nth-child(even) td{background:#FAFAF9}
+.td-proj{padding:9px 12px;border-right:1px solid var(--border);vertical-align:middle}
+.td-proj .pnum{font-size:9px;color:var(--muted);margin-bottom:1px}
+.td-proj .pname{font-size:11px;font-weight:500;line-height:1.3}
+.td-dim{text-align:center;border-right:1px solid var(--border);vertical-align:middle;padding:6px 2px}
+.td-votes{text-align:center;border-right:1px solid var(--border);vertical-align:middle;padding:6px 3px}
+.td-cmt{vertical-align:middle;padding:6px 6px}
+.dot{width:22px;height:22px;border-radius:50%;border:2px solid #C8C6BE;background:transparent;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:all .12s}
+.dot.on{background:var(--navy);border-color:var(--navy)}
+.dot.on::after{content:"";width:8px;height:8px;border-radius:50%;background:#fff;display:block}
+.vinp{width:44px;height:28px;text-align:center;font-size:13px;font-weight:600;border:1.5px solid var(--border);border-radius:7px;background:#fff;color:var(--text)}
+.vinp:focus{outline:none;border-color:var(--blue)}
+.vinp.err{border-color:var(--red);background:#FFF5F5;color:var(--red)}
+.vinp.filled{background:#FAEEDA;border-color:#EF9F27;color:#7A4F00}
+.cinp{width:100%;min-height:32px;font-size:11px;border:1.5px solid var(--border);border-radius:7px;background:#fff;color:var(--text);padding:4px 7px;resize:vertical;font-family:inherit}
+.cinp:focus{outline:none;border-color:var(--blue)}
+.bottom-fixed{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;box-shadow:0 -2px 12px rgba(0,0,0,.08);z-index:50}
+.v-status{font-size:12px}
+.v-status.ok{color:var(--teal);font-weight:500}
+.v-status.err{color:var(--red);font-weight:500}
+.v-status.warn{color:var(--amber)}
+.sub-btn{padding:10px 24px;font-size:13px;font-weight:600;border-radius:10px;border:none;cursor:pointer;background:var(--navy);color:#fff;white-space:nowrap}
+.sub-btn:disabled{background:#C8C6BE;cursor:not-allowed}
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:flex-end;justify-content:center}
+.overlay.show{display:flex}
+.modal{background:var(--card);border-radius:20px 20px 0 0;padding:24px 20px 36px;width:100%;max-width:500px;text-align:center}
+.modal h3{font-size:17px;font-weight:600;margin-bottom:8px}
+.modal p{font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:22px}
+.modal-btns{display:flex;gap:10px}
+.modal-btns button{flex:1;height:46px;border-radius:12px;font-size:14px;font-weight:500;cursor:pointer;border:1.5px solid var(--border)}
+.btn-cancel{background:#fff;color:var(--text)}
+.btn-confirm{background:var(--navy);color:#fff;border-color:var(--navy)}
+.admin-top{background:var(--navy);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.admin-top h1{font-size:14px;font-weight:600;color:#fff}
+.admin-top .sub{font-size:10px;color:rgba(255,255,255,.5);margin-top:2px}
+.abtn{display:inline-flex;align-items:center;gap:5px;padding:6px 14px;font-size:12px;font-weight:500;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.1);color:#fff;cursor:pointer}
+.abtn.white{background:#fff;color:var(--navy);border-color:#fff}
+.admin-body{padding:16px}
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px}
+@media(min-width:600px){.stats{grid-template-columns:repeat(4,1fr)}}
+.stat{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px}
+.stat .sl{font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:4px}
+.stat .sv{font-size:22px;font-weight:700}
+.stat.ok .sv{color:var(--teal)}.stat.warn .sv{color:var(--amber)}.stat.info .sv{color:var(--navy)}
+.sec{background:var(--card);border:1px solid var(--border);border-radius:12px;margin-bottom:14px;overflow:hidden}
+.sec-head{padding:10px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.sec-head h2{font-size:13px;font-weight:600}
+.sec-head .meta{font-size:11px;color:var(--muted)}
+.atable{width:100%;border-collapse:collapse;font-size:12px}
+.atable th{font-size:10px;font-weight:500;color:var(--muted);padding:7px 12px;text-align:left;border-bottom:1px solid var(--border);background:#FAFAF8;white-space:nowrap}
+.atable td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+.atable tr:last-child td{border-bottom:none}
+.badge{display:inline-block;font-size:10px;padding:2px 8px;border-radius:20px;font-weight:500}
+.badge.done{background:#E1F5EE;color:#085041}.badge.pending{background:#FAEEDA;color:#7A4F00}
+.rtag{display:inline-block;font-size:10px;padding:1px 7px;border-radius:4px;font-weight:500}
+.rtag.mgmt{background:#E6F1FB;color:#0C447C}.rtag.public{background:#F1EFE8;color:#3B3A35}
+.rank-c{width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;background:var(--border);color:var(--muted)}
+.rank-c.gold{background:#FAEEDA;color:#7A4F00}.rank-c.silver{background:#F0F0EE;color:#555}.rank-c.bronze{background:#FDEEE6;color:#7A3A1A}
+.fscore{font-size:15px;font-weight:700}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--muted);align-items:center;margin-bottom:8px}
+.leg-item{display:flex;align-items:center;gap:5px}
+.leg-off{width:14px;height:14px;border-radius:50%;border:2px solid #C8C6BE}
+.leg-on{width:14px;height:14px;border-radius:50%;background:var(--navy)}
+.leg-box{width:24px;height:14px;border-radius:3px}
+</style>
+</head>
+<body>
+<div id="loading"><div class="spinner"></div><p>正在加载…</p></div>
+
+<!-- 签到页 -->
+<div id="checkin-page" class="page">
+  <div class="topbar"><h1>Cyberday · 签到</h1><p>AI 课题阶段成果展示日 · 2026.04.28</p></div>
+  <div class="card" style="margin-top:20px">
+    <h2>活动签到</h2><p>输入姓名首字搜索，选择后确认签到</p>
+    <div class="inp-wrap">
+      <input class="inp" id="ci-inp" type="text" placeholder="输入姓名首字…" autocomplete="off" oninput="onCI(this.value)">
+      <div class="dropdown" id="ci-dd" style="display:none"></div>
+    </div>
+    <div id="ci-sel" style="display:none;margin-bottom:12px"><div class="tag-inp"><span id="ci-sel-txt"></span></div></div>
+    <button class="btn btn-primary" id="ci-btn" disabled onclick="doCheckin()">确认签到</button>
+  </div>
+</div>
+
+<!-- 签到成功（非投票者）-->
+<div id="ci-ok-page" class="page">
+  <div class="topbar"><h1>Cyberday · 签到</h1><p>AI 课题阶段成果展示日 · 2026.04.28</p></div>
+  <div class="card" style="margin-top:40px;text-align:center">
+    <div class="success-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#1D9E75" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+    <h2 id="ci-ok-name" style="margin-bottom:8px"></h2>
+    <p id="ci-ok-time" style="color:var(--muted);font-size:13px;margin-bottom:4px"></p>
+    <p style="font-size:13px;color:var(--muted)">签到成功，欢迎参加活动！</p>
+  </div>
+</div>
+
+<!-- 签到成功（投票者）-->
+<div id="voter-ci-page" class="page">
+  <div class="topbar"><h1>Cyberday · 签到</h1><p>AI 课题阶段成果展示日 · 2026.04.28</p></div>
+  <div class="card" style="margin-top:20px;text-align:center">
+    <div class="success-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#1D9E75" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+    <h2 id="voter-ci-name" style="margin-bottom:6px"></h2>
+    <p style="color:var(--muted);font-size:13px;margin-bottom:20px">签到成功！你有评比投票权，请点击下方进行投票</p>
+    <div style="background:#EEF4FB;border:1px solid #B5D4F4;border-radius:12px;padding:16px;margin-bottom:16px">
+      <p style="font-size:12px;color:#0C447C;margin-bottom:8px;font-weight:500">你的专属评分链接</p>
+      <a id="voter-link-a" href="#" style="font-size:12px;color:#378ADD;word-break:break-all" target="_blank"></a>
+    </div>
+    <button class="btn btn-primary" onclick="window.open(window._vLink,'_blank')">立即打开评分页面</button>
+  </div>
+</div>
+
+<!-- 签退页 -->
+<div id="co-page" class="page">
+  <div class="topbar"><h1>Cyberday · 签退</h1><p>AI 课题阶段成果展示日 · 2026.04.28</p></div>
+  <div class="card" style="margin-top:20px">
+    <h2>活动签退</h2><p>输入姓名首字搜索，选择后确认签退</p>
+    <div class="inp-wrap">
+      <input class="inp" id="co-inp" type="text" placeholder="输入姓名首字…" autocomplete="off" oninput="onCO(this.value)">
+      <div class="dropdown" id="co-dd" style="display:none"></div>
+    </div>
+    <div id="co-sel" style="display:none;margin-bottom:12px"><div class="tag-inp"><span id="co-sel-txt"></span></div></div>
+    <button class="btn btn-primary" id="co-btn" disabled onclick="doCheckout()">确认签退</button>
+  </div>
+</div>
+
+<!-- 签退成功 -->
+<div id="co-ok-page" class="page">
+  <div class="topbar"><h1>Cyberday · 签退</h1><p>AI 课题阶段成果展示日 · 2026.04.28</p></div>
+  <div class="card" style="margin-top:40px;text-align:center">
+    <div class="success-icon" style="background:#EEF4FB"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#378ADD" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></div>
+    <h2 id="co-ok-name" style="margin-bottom:8px"></h2>
+    <p id="co-ok-time" style="color:var(--muted);font-size:13px;margin-bottom:4px"></p>
+    <p style="font-size:13px;color:var(--muted)">签退成功，感谢参与活动！</p>
+  </div>
+</div>
+
+<!-- 投票页 -->
+<div id="vote-page" class="page">
+  <div class="vote-topbar">
+    <div style="display:flex;align-items:center;gap:8px"><span class="uname" id="v-name"></span><span class="role-pill" id="v-role"></span></div>
+    <span style="font-size:11px;color:rgba(255,255,255,.5)">2026.04.28</span>
+  </div>
+  <div class="vote-body">
+    <div class="summary-card">
+      <div><h2>评比打分表</h2><p>点选维度 + 分配 5 票</p></div>
+      <div class="tally"><div class="tally-num" id="tally-num">0</div><div class="tally-label">/ 5 票</div></div>
+    </div>
+    <div class="legend">
+      <div class="leg-item"><div class="leg-off"></div>未选</div>
+      <div class="leg-item"><div class="leg-on"></div>已选</div>
+      <div class="leg-item"><div class="leg-box" style="background:#FAEEDA;border:1.5px solid #EF9F27"></div>已填票</div>
+      <div class="leg-item"><div class="leg-box" style="background:#FFF5F5;border:1.5px solid #E24B4A"></div>超限</div>
+    </div>
+    <div class="table-scroll"><table>
+      <thead><tr>
+        <th class="th-proj">课题组</th>
+        <th class="th-dim"><div class="dnum">01</div><div class="dname">方向契合</div></th>
+        <th class="th-dim"><div class="dnum">02</div><div class="dname">方案创新</div></th>
+        <th class="th-dim"><div class="dnum">03</div><div class="dname">系统体系</div></th>
+        <th class="th-dim"><div class="dnum">04</div><div class="dname">落地可行</div></th>
+        <th class="th-dim"><div class="dnum">05</div><div class="dname">ROI预期</div></th>
+        <th class="th-dim"><div class="dnum">06</div><div class="dname">长远持续</div></th>
+        <th class="th-dim"><div class="dnum">07</div><div class="dname">进展质量</div></th>
+        <th class="th-dim"><div class="dnum">08</div><div class="dname">目标清晰</div></th>
+        <th class="th-votes">得票<br><span style="font-size:8px;font-weight:400">0-5</span></th>
+        <th class="th-cmt">评语</th>
+      </tr></thead>
+      <tbody id="vote-tbody"></tbody>
+    </table></div>
+  </div>
+  <div class="bottom-fixed">
+    <span class="v-status" id="v-status">总票数须等于5</span>
+    <button class="sub-btn" id="sub-btn" disabled onclick="askConfirm()">提交评分</button>
+  </div>
+</div>
+
+<!-- 确认弹窗 -->
+<div class="overlay" id="confirm-modal">
+  <div class="modal">
+    <h3>确认提交评分？</h3>
+    <p>提交后将记录你的评分结果。</p>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal()">返回修改</button>
+      <button class="btn-confirm" onclick="doSubmitVote()">确认提交</button>
+    </div>
+  </div>
+</div>
+
+<!-- 投票完成 -->
+<div id="vote-done-page" class="page">
+  <div class="vote-topbar"><span class="uname" id="vd-name"></span></div>
+  <div class="card" style="margin-top:40px;text-align:center">
+    <div class="success-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#1D9E75" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+    <h2 style="margin-bottom:8px">评分已提交</h2>
+    <p id="vd-time" style="font-size:13px;color:var(--muted)"></p>
+    <p style="font-size:13px;color:var(--muted);margin-top:8px">感谢参与，结果将于当晚另行通知。</p>
+  </div>
+</div>
+
+<!-- 错误页 -->
+<div id="err-page" class="page">
+  <div class="card" style="margin-top:60px;text-align:center">
+    <div style="width:56px;height:56px;border-radius:50%;background:#FFEEED;display:flex;align-items:center;justify-content:center;margin:0 auto 16px">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#E24B4A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    </div>
+    <h2 id="err-title" style="margin-bottom:8px">链接无效</h2>
+    <p id="err-desc" style="font-size:13px;color:var(--muted)">请联系管理员。</p>
+  </div>
+</div>
+
+<!-- 管理后台 -->
+<div id="admin-page" class="page">
+  <div class="admin-top">
+    <div><h1>Cyberday 管理后台</h1><div class="sub">2026.04.28</div></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="abtn" onclick="doLoadAll()">刷新</button>
+      <button class="abtn white" onclick="doExport()">导出明细</button>
+    </div>
+  </div>
+  <div class="admin-body">
+    <div class="stats">
+      <div class="stat info"><div class="sl">签到人数</div><div class="sv" id="s-ci">-</div></div>
+      <div class="stat ok"><div class="sl">已投票</div><div class="sv" id="s-voted">-</div></div>
+      <div class="stat warn"><div class="sl">未投票</div><div class="sv" id="s-unvoted">-</div></div>
+      <div class="stat"><div class="sl">签退人数</div><div class="sv" id="s-co">-</div></div>
+    </div>
+    <div class="sec">
+      <div class="sec-head"><h2>投票者状态</h2><span class="meta" id="ref-time"></span></div>
+      <div style="overflow-x:auto"><table class="atable">
+        <thead><tr><th>#</th><th>姓名</th><th>角色</th><th>签到</th><th>投票</th><th>签退</th><th>提交时间</th></tr></thead>
+        <tbody id="vtb"></tbody>
+      </table></div>
+    </div>
+    <div class="sec">
+      <div class="sec-head"><h2>签到记录</h2></div>
+      <div style="overflow-x:auto"><table class="atable">
+        <thead><tr><th>#</th><th>姓名</th><th>签到时间</th><th>签退时间</th><th>投票者</th></tr></thead>
+        <tbody id="atb"></tbody>
+      </table></div>
+    </div>
+    <div class="sec">
+      <div class="sec-head"><h2>评比结果</h2><span class="meta">维度x70%+得票x30% · 统筹60%+群众40%</span></div>
+      <div style="overflow-x:auto"><table class="atable" style="min-width:600px">
+        <thead><tr><th>排名</th><th style="min-width:160px">课题组</th><th>维度(统筹)</th><th>维度(群众)</th><th>得票(统筹)</th><th>得票(群众)</th><th style="min-width:80px">综合得分</th></tr></thead>
+        <tbody id="rtb"></tbody>
+      </table></div>
+    </div>
+    <div class="sec">
+      <div class="sec-head"><h2>统筹专属链接（直接发给本人）</h2></div>
+      <div style="overflow-x:auto"><table class="atable">
+        <thead><tr><th>#</th><th>姓名</th><th>链接</th></tr></thead>
+        <tbody id="ltb"></tbody>
+      </table></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPA_URL="https://eodhinqddqtcastryyhr.supabase.co";
+const SUPA_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVvZGhpbnFkZHF0Y2FzdHJ5eWhyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcyODcyMDAsImV4cCI6MjA5Mjg2MzIwMH0.UbeGXp11_ECTZX1jmydEqsUWJzsqr0rsi8D9ytHdTj0";
+const ADMIN_KEY="cyberday2026admin";
+const BASE_URL="https://cyberday-test.vercel.app/cyberday-prod.html";
+const EMPLOYEES=["陈国平", "黎明", "刘勇勤", "吴肖峻", "莫绮雯", "张彦", "盛雷", "林钦填", "施思", "黄敏", "黄兵兵", "林培漩", "梁思诗", "陶然", "詹源英", "徐婷婷", "饶洁", "赵婧媛", "李芝寒", "谢荣斌", "何南", "赖志文", "陈婷", "吴娈", "黄培思", "庞明辉", "王湘玲", "邹鹏", "曹睿军", "欧炜杰", "李婉怡", "秦子琪", "吉玲玲", "肖佳", "孙中华", "孙冰", "叶宜傅", "许明", "杨莉", "章聪聪", "马林艳", "张天琦", "张成臣", "潘夕春", "孙洪枫", "邱兆旭", "窦怀荆", "李廷杰", "陈伟", "赵金龙", "王硕", "全洪英", "陈明", "邹平安", "蔡海东", "刘成", "吴锦", "冯继武", "朱顾亮", "季恒通", "杨潇", "刘成danny", "郝文浩", "吴熳锘", "李金铎", "尹善林", "吴刚", "钱鸣", "张念杰", "沈超", "罗明涛", "闫昌盛", "陆佳敏", "张维壮", "杨高", "庄晶", "楚海洋", "李秀仙", "李俊澜", "毕逸然", "尤俊杰", "周勇军", "陈垚", "林晓渐", "顾健", "裴会超", "程宝强", "朱嗣琪", "谢德明", "薛峰", "梁展铭", "罗文", "苗昌健", "管卿", "冯日新", "詹登弘", "彭萨萨", "陈铅", "黄经海", "曾灿生", "赵汝勤", "陈文慧", "杨涌", "陈泳萍", "苏蕴丝", "李桂梅", "陈欣", "何宝仪", "陈丽媚", "林洁颖", "张明丽", "于绪龙", "石雨", "邵培", "张仕杰", "吴耶恩", "周浩亮", "朱志华", "杨晓磊", "钟佳妮", "郑梓仪", "黄冰逸", "梁晓玲", "谢雪莹", "许晓纯", "陈洁珊", "谢艳芳", "黄绮利", "吴艳梅", "毕婉敏", "邓晓婷", "彭纯", "吴静怡", "王文慧", "覃秋莲", "吴瑞香", "黄瑜婷", "葛耀敏", "王梦婷", "高晓珊", "苏颖贤", "刁雅", "邱松发", "尹嘉敏", "邓晓雯", "黄永康", "李土红", "谢仕娜", "夏明", "刘斯敏", "梁乾", "李肖鹏", "郑舒婷", "周倬铃", "姚灿坚", "杨晓蓓", "黄靖", "冯婷", "卢秋凤", "肖慧婷", "钟宇静", "杨世坤", "林常华", "杨嘉恩", "邝亮华", "罗巧云", "严志坚", "陈莞根", "黎顶泉", "罗秀龙", "冯世鹏", "江海琪", "林春婷", "周涛", "植文胜", "周巧红", "王芷妍", "彭英泰", "利泳欣", "涂益佳", "钟舒婷", "罗婷", "陈宜玲", "骆宝娟", "周晓云", "李青云", "肖伟华", "曾晓燕", "崔淑颖", "欧阳校斌", "梁涛", "陈成", "蔡业东", "周志豪", "林凯城", "李余峰", "刘青阳", "萧浩锋", "彭鑫", "曾居仲", "朱佩豪", "龙锦炎", "邓月萍", "何湄玲", "陈燕冰", "周月娟", "周炽亮", "黄晓敏", "骆举辉", "邓志芳", "翟小芬", "梁佩", "钟少芬", "刘小茹", "周薇", "周旋", "苏雪林", "张琳", "陈磊", "胡禧彤", "蓝嘉雯", "肖妮", "魏瑶", "黎卫儿", "马嘉琪", "梁苑瑜", "谢小小", "卢晓娟", "吴敬葵", "朱天维", "王茹", "钟立宜", "吴其龙", "黎驰强", "陈志伟", "蓝文广", "黄德龙", "王卫娟", "李亚帅", "赵同", "韩鹏", "仇思琦", "刘丽丽", "朱培", "范胜娟", "林锋拥", "陈盈如", "刘至君", "黄俊", "陈金娣", "赵崇滨", "罗婉莹", "钟佳国", "韩小君", "张安琪", "廖谨火", "王超", "陈雪连", "张志聪", "周修云", "唐均峡", "张璐", "吴烨", "施玲霞", "李瑾", "储红月", "邢晓林", "魏亚伟", "郑贤豪", "张艳泓", "陈玉萍", "邓铭武", "易业锋", "邓敏仪", "孔庆卫", "沈迪艳", "李磊Leo", "黄嘉珍", "陈科铮", "陈煌", "张鑫豪", "刘铭", "刘庚", "李纪威", "曾莹", "沈娜娜", "练广辉", "杜啟文", "马莹莹", "陈小韵", "张海荣", "谭锐华", "张治滨", "覃俊杰", "满辉华", "刘存锋", "刘伟林", "陈悦", "孟远忍", "林秀萍", "李富强", "曹剑龙", "冯海媚", "吴秉桦", "崔志勇", "周维", "陈泽彬", "贺冬", "刘惠琴", "陈佳豪", "黎谦如", "李俊", "袁建涛", "邱源洲", "高瑞翔", "钟凯", "郑名浩", "陈锐华", "杨明添", "林伟元", "程建海", "肖全发", "杨超朋", "黄可盈", "韩敏强", "吴宏涛", "陈小琴", "李慧燕", "金华勇", "徐健锋", "卢梓豪", "梁燕丽", "程志河", "王诚", "甘华兴", "罗浩", "姚栋", "李晓明", "李泽华", "付莉莉", "汤瑞琪", "向美铃", "钟茂连", "谢金谊", "何泳怡", "郑志烽", "李宝极", "张泽滨", "邓浩进", "曹舜熙", "何俊鹏", "陈佳炜", "林泽欢", "谢文俊", "梅健超", "邓永青", "莫锦德", "张炯育", "陈永钊", "邓怀宇", "陈宝诺", "陈港家", "严俊豪", "夏能权", "张奕锐", "钱菊茹", "黄琳炫", "胡尹群", "朱咏珊", "张婷", "林晓雯", "邓锐豪", "许志文", "周凯", "苏炳辉", "陈朝柱", "李俊曦", "罗海升", "尚鹏", "李平颐", "方卓生", "周李", "金星", "林婷", "林桂丹", "陈俊良", "陈圳超", "王智谦", "韩岳宏", "陆炜进", "徐奕昕", "盖飞", "韦金波", "田晓文", "杨永勤", "任日超", "李美霞", "钟啟飞", "马永涛", "卢伟林", "刘嘉升", "林悦慧", "李芬芳", "程思华", "张家昌", "雷元", "王宇凤", "臧幸悦", "司徒亭玉", "庄佳伟", "朱东东", "赵宝丽", "李诗婷", "谢洁仪", "庞清", "何景奎", "罗敏", "廖武军", "刘韵华", "古云虹", "陈海纯", "刘卓敏", "邱惜吟", "朱沙敏", "吴芹", "曹素媛", "黎思思", "蔡咏霖", "龙颖", "陈倩", "何晶", "洪菊英", "路瑜", "潘燕仪", "张会敏", "钟楚谊", "徐明燕", "翟凤婷", "罗雨晴", "李磊", "黄锦霞"];
+const VOTER_NAMES=["陈国平", "Gordon Du", "吴肖峻", "刘勇勤", "曹睿军", "黄德龙", "蓝文广", "孙中华", "许明", "钟茂连", "郑贤豪", "朱志华", "欧炜杰", "卢梓豪", "冯世鹏", "程建海", "邓晓婷", "陈成", "彭鑫", "李纪威", "谭锐华", "周维", "黄经海", "陈文慧"];
+const VOTER_MAP={"陈国平": "tkn_cgp_001", "Gordon Du": "tkn_gdu_002", "吴肖峻": "tkn_wxj_003", "刘勇勤": "tkn_lyq_004", "曹睿军": "tkn_crj_005", "黄德龙": "tkn_hdl_006", "蓝文广": "tkn_lwg_007", "孙中华": "tkn_szh_008", "许明": "tkn_xum_009", "钟茂连": "tkn_zml_010", "郑贤豪": "tkn_zxh_011", "朱志华": "tkn_zzh_012", "欧炜杰": "tkn_owj_013", "卢梓豪": "tkn_lmh_014", "冯世鹏": "tkn_fsp_015", "程建海": "tkn_cjh_016", "邓晓婷": "tkn_dxt_017", "陈成": "tkn_cch_018", "彭鑫": "tkn_pex_019", "李纪威": "tkn_ljw_020", "谭锐华": "tkn_trh_021", "周维": "tkn_zhw_022", "黄经海": "tkn_hjh_023", "陈文慧": "tkn_cwh_024"};
+const VOTERS=[{"token": "tkn_cgp_001", "name": "陈国平", "role": "mgmt", "role_label": "AI统筹会", "weight": 0.6}, {"token": "tkn_gdu_002", "name": "Gordon Du", "role": "mgmt", "role_label": "AI统筹会", "weight": 0.6}, {"token": "tkn_wxj_003", "name": "吴肖峻", "role": "mgmt", "role_label": "AI统筹会", "weight": 0.6}, {"token": "tkn_lyq_004", "name": "刘勇勤", "role": "mgmt", "role_label": "AI统筹会", "weight": 0.6}, {"token": "tkn_crj_005", "name": "曹睿军", "role": "public", "role_label": "部门负责人", "weight": 0.4}, {"token": "tkn_hdl_006", "name": "黄德龙", "role": "public", "role_label": "部门负责人", "weight": 0.4}, {"token": "tkn_lwg_007", "name": "蓝文广", "role": "public", "role_label": "部门负责人", "weight": 0.4}, {"token": "tkn_szh_008", "name": "孙中华", "role": "public", "role_label": "部门负责人", "weight": 0.4}, {"token": "tkn_xum_009", "name": "许明", "role": "public", "role_label": "部门负责人", "weight": 0.4}, {"token": "tkn_zml_010", "name": "钟茂连", "role": "public", "role_label": "部门负责人", "weight": 0.4}, {"token": "tkn_zxh_011", "name": "郑贤豪", "role": "public", "role_label": "部门负责人", "weight": 0.4}, {"token": "tkn_zzh_012", "name": "朱志华", "role": "public", "role_label": "部门负责人", "weight": 0.4}, {"token": "tkn_owj_013", "name": "欧炜杰", "role": "public", "role_label": "课题负责人", "weight": 0.4}, {"token": "tkn_lmh_014", "name": "卢梓豪", "role": "public", "role_label": "课题负责人", "weight": 0.4}, {"token": "tkn_fsp_015", "name": "冯世鹏", "role": "public", "role_label": "课题负责人", "weight": 0.4}, {"token": "tkn_cjh_016", "name": "程建海", "role": "public", "role_label": "课题负责人", "weight": 0.4}, {"token": "tkn_dxt_017", "name": "邓晓婷", "role": "public", "role_label": "课题负责人", "weight": 0.4}, {"token": "tkn_cch_018", "name": "陈成", "role": "public", "role_label": "课题负责人", "weight": 0.4}, {"token": "tkn_pex_019", "name": "彭鑫", "role": "public", "role_label": "课题负责人", "weight": 0.4}, {"token": "tkn_ljw_020", "name": "李纪威", "role": "public", "role_label": "课题负责人", "weight": 0.4}, {"token": "tkn_trh_021", "name": "谭锐华", "role": "public", "role_label": "课题负责人", "weight": 0.4}, {"token": "tkn_zhw_022", "name": "周维", "role": "public", "role_label": "课题负责人", "weight": 0.4}, {"token": "tkn_hjh_023", "name": "黄经海", "role": "public", "role_label": "课题负责人", "weight": 0.4}, {"token": "tkn_cwh_024", "name": "陈文慧", "role": "public", "role_label": "课题负责人", "weight": 0.4}];
+const PROJECTS=["需求调研 Agent AI（会议助理-Agent）", "全栈技术整合与效能提升", "AI 程序员 Agent", "系统架构升级", "运维提效闭环", "AI-first 交付体系", "电商 RPA 自动化", "TPM 项目 - AI 提效", "AI 实战全栈开发与效能提升", "数据清洗与报表", "归因分析试点", "AI 自动生成移动应用开发", "自动测试"];
+
+const N=13,DIMS=8,MAX_VOTES=5;
+let sb;
+(async()=>{
+  const m=await import("https://esm.sh/@supabase/supabase-js@2");
+  sb=m.createClient(SUPA_URL,SUPA_KEY);
+  router();
+})();
+
+const $=id=>document.getElementById(id);
+const showPage=id=>{
+  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+  $(id).classList.add("active");
+  $("loading").style.display="none";
+};
+const showErr=(t,d)=>{$("err-title").textContent=t;$("err-desc").textContent=d;showPage("err-page")};
+
+function router(){
+  const p=new URLSearchParams(location.search);
+  const mode=p.get("mode"),token=p.get("token"),key=p.get("key");
+  if(key===ADMIN_KEY){showPage("admin-page");initAdmin();return;}
+  if(mode==="checkout"){showPage("co-page");return;}
+  if(token){initVote(token);return;}
+  showPage("checkin-page");
+}
+
+// CHECKIN
+let ciSel="";
+function onCI(v){
+  ciSel="";$("ci-btn").disabled=true;$("ci-sel").style.display="none";
+  const dd=$("ci-dd");
+  if(!v){dd.style.display="none";return;}
+  const m=EMPLOYEES.filter(n=>n.includes(v)).slice(0,20);
+  if(!m.length){dd.style.display="none";return;}
+  dd.innerHTML=m.map(n=>`<div class="dropdown-item" onclick="selCI('${n}')">${n}</div>`).join("");
+  dd.style.display="block";
+}
+function selCI(name){
+  ciSel=name;$("ci-inp").value=name;$("ci-dd").style.display="none";
+  $("ci-sel-txt").textContent=name;$("ci-sel").style.display="block";
+  $("ci-btn").disabled=false;
+}
+async function doCheckin(){
+  if(!ciSel)return;
+  const btn=$("ci-btn");btn.disabled=true;btn.textContent="签到中…";
+  const isV=VOTER_MAP.hasOwnProperty(ciSel);
+  const token=isV?VOTER_MAP[ciSel]:null;
+  const now=new Date().toISOString();
+  const {data:ex}=await sb.from("attendees").select("*").eq("name",ciSel).limit(1);
+  if(!ex||!ex.length){
+    await sb.from("attendees").insert({name:ciSel,checkin_at:now,is_voter:isV,voter_token:token});
+  }
+  const t=new Date().toLocaleTimeString("zh-CN",{hour:"2-digit",minute:"2-digit"});
+  if(isV){
+    $("voter-ci-name").textContent=ciSel;
+    const lnk=BASE_URL+"?token="+token;
+    $("voter-link-a").href=lnk;$("voter-link-a").textContent=lnk;
+    window._vLink=lnk;
+    showPage("voter-ci-page");
+  } else {
+    $("ci-ok-name").textContent=ciSel+" 签到成功";
+    $("ci-ok-time").textContent="签到时间："+t;
+    showPage("ci-ok-page");
+  }
+}
+
+// CHECKOUT
+let coSel="";
+function onCO(v){
+  coSel="";$("co-btn").disabled=true;$("co-sel").style.display="none";
+  const dd=$("co-dd");
+  if(!v){dd.style.display="none";return;}
+  const m=EMPLOYEES.filter(n=>n.includes(v)).slice(0,20);
+  if(!m.length){dd.style.display="none";return;}
+  dd.innerHTML=m.map(n=>`<div class="dropdown-item" onclick="selCO('${n}')">${n}</div>`).join("");
+  dd.style.display="block";
+}
+function selCO(name){
+  coSel=name;$("co-inp").value=name;$("co-dd").style.display="none";
+  $("co-sel-txt").textContent=name;$("co-sel").style.display="block";
+  $("co-btn").disabled=false;
+}
+async function doCheckout(){
+  if(!coSel)return;
+  const btn=$("co-btn");btn.disabled=true;btn.textContent="签退中…";
+  const now=new Date().toISOString();
+  const {data:ex}=await sb.from("attendees").select("*").eq("name",coSel).order("created_at",{ascending:false}).limit(1);
+  if(ex&&ex.length){await sb.from("attendees").update({checkout_at:now}).eq("id",ex[0].id);}
+  else{await sb.from("attendees").insert({name:coSel,checkout_at:now});}
+  const t=new Date().toLocaleTimeString("zh-CN",{hour:"2-digit",minute:"2-digit"});
+  $("co-ok-name").textContent=coSel+" 签退成功";
+  $("co-ok-time").textContent="签退时间："+t;
+  showPage("co-ok-page");
+}
+
+// VOTE
+let voter=null,dots=Array.from({length:N},()=>Array(DIMS).fill(false)),votes=Array(N).fill(0),cmts=Array(N).fill(""),saveTimer=null;
+
+async function initVote(token){
+  const{data:v,error}=await sb.from("voters").select("*").eq("token",token).single();
+  if(error||!v){showErr("链接无效","此链接不存在，请联系管理员。");return;}
+  voter=v;
+  if(v.submitted){
+    $("vd-name").textContent=v.name;
+    $("vd-time").textContent="已于"+new Date(v.submitted_at).toLocaleString("zh-CN")+"提交";
+    showPage("vote-done-page");return;
+  }
+  const{data:saved}=await sb.from("scores").select("*").eq("voter_token",token);
+  if(saved&&saved.length)saved.forEach(s=>{
+    const i=s.project_id-1;
+    dots[i]=[s.dim_01,s.dim_02,s.dim_03,s.dim_04,s.dim_05,s.dim_06,s.dim_07,s.dim_08];
+    votes[i]=s.votes||0;cmts[i]=s.comment||"";
+  });
+  $("v-name").textContent=v.name;
+  const rp=$("v-role");rp.textContent=v.role_label;rp.className="role-pill "+v.role;
+  buildVoteTable();showPage("vote-page");updateVS();
+}
+
+function buildVoteTable(){
+  $("vote-tbody").innerHTML=PROJECTS.map((name,i)=>`
+    <tr id="vr${i}">
+      <td class="td-proj"><div class="pnum">${String(i+1).padStart(2,"0")}</div><div class="pname">${name}</div></td>
+      ${Array(DIMS).fill(0).map((_,d)=>`<td class="td-dim"><div class="dot${dots[i][d]?" on":""}" id="dot${i}_${d}" onclick="tgDot(${i},${d})"></div></td>`).join("")}
+      <td class="td-votes"><input class="vinp${votes[i]>0?" filled":""}" id="vi${i}" type="number" min="0" max="5" step="1" value="${votes[i]||""}" placeholder="-" oninput="onVI(${i},this.value)" inputmode="numeric"></td>
+      <td class="td-cmt"><textarea class="cinp" id="ci${i}" placeholder="评语…" oninput="cmts[${i}]=this.value">${cmts[i]}</textarea></td>
+    </tr>`).join("");
+}
+
+window.tgDot=(i,d)=>{dots[i][d]=!dots[i][d];$(`dot${i}_${d}`).className="dot"+(dots[i][d]?" on":"");sched();};
+window.onVI=(i,v)=>{const val=v===""?0:Math.max(0,parseInt(v)||0);votes[i]=val;if(v!=="")$("vi"+i).value=val;updRS(i);updateVS();sched();};
+
+function updRS(i){
+  const inp=$("vi"+i),over=votes[i]>MAX_VOTES;
+  inp.className="vinp"+(over?" err":votes[i]>0?" filled":"");
+  $("vr"+i).style.background=over?"#FFF5F5":"";
+}
+function updateVS(){
+  const used=votes.reduce((s,v)=>s+v,0);
+  const tn=$("tally-num"),st=$("v-status"),btn=$("sub-btn");
+  Array.from({length:N},(_,i)=>updRS(i));
+  tn.textContent=used;tn.className="tally-num "+(used===MAX_VOTES?"ok":used>MAX_VOTES?"over":"under");
+  if(used===MAX_VOTES){st.textContent="票数已满，可以提交";st.className="v-status ok";btn.disabled=false;}
+  else if(used>MAX_VOTES){st.textContent="超出"+(used-MAX_VOTES)+"票";st.className="v-status err";btn.disabled=true;}
+  else{st.textContent="还差"+(MAX_VOTES-used)+"票";st.className="v-status warn";btn.disabled=true;}
+}
+function sched(){clearTimeout(saveTimer);saveTimer=setTimeout(saveDraft,1500);}
+async function saveDraft(){
+  if(!voter)return;
+  const rows=PROJECTS.map((_,i)=>({
+    voter_token:voter.token,project_id:i+1,
+    dim_01:dots[i][0],dim_02:dots[i][1],dim_03:dots[i][2],dim_04:dots[i][3],
+    dim_05:dots[i][4],dim_06:dots[i][5],dim_07:dots[i][6],dim_08:dots[i][7],
+    votes:votes[i],comment:cmts[i],updated_at:new Date().toISOString()
+  }));
+  await sb.from("scores").upsert(rows,{onConflict:"voter_token,project_id"});
+}
+window.askConfirm=()=>{if(votes.reduce((s,v)=>s+v,0)!==MAX_VOTES)return;$("confirm-modal").classList.add("show");};
+window.closeModal=()=>$("confirm-modal").classList.remove("show");
+window.doSubmitVote=async()=>{
+  closeModal();const btn=$("sub-btn");btn.disabled=true;btn.textContent="提交中…";
+  await saveDraft();
+  const{error}=await sb.from("voters").update({submitted:true,submitted_at:new Date().toISOString()}).eq("token",voter.token);
+  if(error){btn.disabled=false;btn.textContent="提交评分";alert("提交失败，请重试");return;}
+  $("vd-name").textContent=voter.name;
+  $("vd-time").textContent="提交时间："+new Date().toLocaleString("zh-CN");
+  showPage("vote-done-page");
+};
+
+// ADMIN
+let aVoters=[],aScores=[],aAttend=[];
+async function initAdmin(){
+  renderMgmtLinks();
+  await doLoadAll();
+  setInterval(doLoadAll,60000);
+}
+function renderMgmtLinks(){
+  $("ltb").innerHTML=VOTERS.filter(v=>v.role==="mgmt").map((v,i)=>{
+    const lnk=BASE_URL+"?token="+v.token;
+    return `<tr><td>${i+1}</td><td style="font-weight:500">${v.name}</td><td><a href="${lnk}" target="_blank" style="color:var(--blue);font-size:11px;word-break:break-all">${lnk}</a></td></tr>`;
+  }).join("");
+}
+window.doLoadAll=async()=>{
+  const[{data:voters},{data:scores},{data:attend}]=await Promise.all([
+    sb.from("voters").select("*").order("created_at"),
+    sb.from("scores").select("*"),
+    sb.from("attendees").select("*").order("checkin_at",{ascending:false})
+  ]);
+  aVoters=voters||[];aScores=scores||[];aAttend=attend||[];
+  const ci=aAttend.filter(a=>a.checkin_at).length;
+  const co=aAttend.filter(a=>a.checkout_at).length;
+  const voted=aVoters.filter(v=>v.submitted).length;
+  $("s-ci").textContent=ci;$("s-voted").textContent=voted;
+  $("s-unvoted").textContent=aVoters.length-voted;$("s-co").textContent=co;
+  $("vtb").innerHTML=aVoters.map((v,i)=>{
+    const att=aAttend.find(a=>a.voter_token===v.token||a.name===v.name);
+    const ci2=att&&att.checkin_at?new Date(att.checkin_at).toLocaleTimeString("zh-CN",{hour:"2-digit",minute:"2-digit"}):"—";
+    const co2=att&&att.checkout_at?new Date(att.checkout_at).toLocaleTimeString("zh-CN",{hour:"2-digit",minute:"2-digit"}):"—";
+    return `<tr><td style="color:var(--muted)">${i+1}</td><td style="font-weight:500">${v.name}</td>
+    <td><span class="rtag ${v.role}">${v.role_label}</span></td>
+    <td>${ci2}</td><td><span class="badge ${v.submitted?"done":"pending"}">${v.submitted?"已投票":"未投票"}</span></td>
+    <td>${co2}</td><td style="font-size:11px;color:var(--muted)">${v.submitted_at?new Date(v.submitted_at).toLocaleString("zh-CN"):"—"}</td></tr>`;
+  }).join("");
+  const uniq=[];aAttend.forEach(a=>{if(!uniq.find(u=>u.name===a.name))uniq.push(a);});
+  $("atb").innerHTML=uniq.map((a,i)=>{
+    const ci2=a.checkin_at?new Date(a.checkin_at).toLocaleTimeString("zh-CN",{hour:"2-digit",minute:"2-digit"}):"—";
+    const co2=a.checkout_at?new Date(a.checkout_at).toLocaleTimeString("zh-CN",{hour:"2-digit",minute:"2-digit"}):"—";
+    return `<tr><td style="color:var(--muted)">${i+1}</td><td style="font-weight:500">${a.name}</td><td>${ci2}</td><td>${co2}</td><td>${a.is_voter?"<span class=\"badge done\">是</span>":"—"}</td></tr>`;
+  }).join("");
+  const mg=aVoters.filter(v=>v.role==="mgmt"&&v.submitted);
+  const pb=aVoters.filter(v=>v.role==="public"&&v.submitted);
+  const results=PROJECTS.map((name,i)=>{
+    const pid=i+1;
+    const mS=aScores.filter(s=>s.project_id===pid&&mg.find(v=>v.token===s.voter_token));
+    const pS=aScores.filter(s=>s.project_id===pid&&pb.find(v=>v.token===s.voter_token));
+    const dp=arr=>arr.length===0?0:arr.reduce((s,r)=>s+[r.dim_01,r.dim_02,r.dim_03,r.dim_04,r.dim_05,r.dim_06,r.dim_07,r.dim_08].filter(Boolean).length,0)/(arr.length*8);
+    const vp=(arr,vts)=>vts.length===0?0:arr.reduce((s,r)=>s+(r.votes||0),0)/(vts.length*5);
+    const wD=(dp(mS)*0.6+dp(pS)*0.4)*100;
+    const wV=(vp(mS,mg)*0.6+vp(pS,pb)*0.4)*100;
+    return{name,mDim:Math.round(dp(mS)*100),pDim:Math.round(dp(pS)*100),
+      mVote:mS.reduce((s,r)=>s+(r.votes||0),0),pVote:pS.reduce((s,r)=>s+(r.votes||0),0),
+      score:Math.round((wD*0.7+wV*0.3)*10)/10};
+  });
+  results.sort((a,b)=>b.score-a.score);const maxS=results[0]&&results[0].score||1;
+  const rc=r=>r===0?"gold":r===1?"silver":r===2?"bronze":"";
+  $("rtb").innerHTML=results.map((r,rank)=>`
+    <tr style="${rank<3?"background:#FFFBF0":""}">
+      <td><span class="rank-c ${rc(rank)}">${rank+1}</span></td>
+      <td style="font-weight:500;font-size:12px">${r.name}</td>
+      <td>${r.mDim>0?r.mDim+"%":"—"}</td><td>${r.pDim>0?r.pDim+"%":"—"}</td>
+      <td>${r.mVote}</td><td>${r.pVote}</td>
+      <td><span class="fscore">${r.score>0?r.score.toFixed(1):"—"}</span></td>
+    </tr>`).join("");
+  $("ref-time").textContent="刷新于"+new Date().toLocaleTimeString("zh-CN");
+};
+window.doExport=()=>{
+  if(!aScores.length){alert("暂无评分数据");return;}
+  const dims=["方向契合度","方案创新性","系统体系性","落地可行性","ROI预期","长远可持续","进展质量","目标清晰度"];
+  const h1=["姓名","角色","课题组","课题序号",...dims,"得票数","评语","提交时间"];
+  const rows1=[];
+  aVoters.filter(v=>v.submitted).forEach(voter=>{
+    aScores.filter(s=>s.voter_token===voter.token).forEach(s=>{
+      rows1.push([voter.name,voter.role_label,PROJECTS[s.project_id-1],s.project_id,
+        s.dim_01?1:0,s.dim_02?1:0,s.dim_03?1:0,s.dim_04?1:0,
+        s.dim_05?1:0,s.dim_06?1:0,s.dim_07?1:0,s.dim_08?1:0,
+        s.votes||0,(s.comment||"").replace(/,/g,"，"),
+        voter.submitted_at?new Date(voter.submitted_at).toLocaleString("zh-CN"):""])
+    });
+  });
+  const h2=["姓名","签到时间","签退时间","是否投票者"];
+  const rows2=aAttend.map(a=>[a.name,
+    a.checkin_at?new Date(a.checkin_at).toLocaleString("zh-CN"):"",
+    a.checkout_at?new Date(a.checkout_at).toLocaleString("zh-CN"):"",
+    a.is_voter?"是":"否"]);
+  const bom="﻿";
+  const csv=bom+"=== 评分明细 ===\n"+[h1,...rows1].map(r=>r.join(",")).join("\n")+"\n\n=== 签到记录 ===\n"+[h2,...rows2].map(r=>r.join(",")).join("\n");
+  const a=Object.assign(document.createElement("a"),{
+    href:URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"})),
+    download:"cyberday_"+Date.now()+".csv"
+  });a.click();
+};
+document.addEventListener("click",e=>{
+  if(!e.target.closest(".inp-wrap")){
+    ["ci-dd","co-dd"].forEach(id=>{const el=$(id);if(el)el.style.display="none";});
+  }
+});
+</script>
+</body>
+</html>
