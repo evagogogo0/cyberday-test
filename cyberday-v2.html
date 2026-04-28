@@ -120,6 +120,7 @@ tbody tr:nth-child(even) td{background:#FAFAF9}
 .leg-on{width:14px;height:14px;border-radius:50%;background:var(--navy)}
 .leg-box{width:24px;height:14px;border-radius:3px}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 <div id="loading"><div class="spinner"></div><p>正在加载...</p></div>
@@ -300,12 +301,8 @@ var VOTERS=[{"token": "tkn_cgp_001", "name": "陈国平", "role": "mgmt", "role_
 var PROJECTS=["需求调研 Agent AI（会议助理-Agent）", "全栈技术整合与效能提升", "AI 程序员 Agent", "系统架构升级", "运维提效闭环", "AI-first 交付体系", "电商 RPA 自动化", "TPM 项目 - AI 提效", "AI 实战全栈开发与效能提升", "数据清洗与报表", "归因分析试点", "AI 自动生成移动应用开发", "自动测试"];
 
 var N=13,DIMS=8,MAX_VOTES=5;
-var sb;
-(async function(){
-  var m=await import("https://esm.sh/@supabase/supabase-js@2");
-  sb=m.createClient(SUPA_URL,SUPA_KEY);
-  router();
-})();
+var sb=supabase.createClient(SUPA_URL,SUPA_KEY);
+router();
 
 function $(id){return document.getElementById(id);}
 function showPage(id){
