@@ -801,12 +801,7 @@ async function toggleVote(token, newVal) {
     const v = aVoters.find(v => v.token === token);
     const name = v ? v.name : token;
     // Show copyable link
-    if (confirm("已为「" + name + "」开启投票！
-
-专属链接：
-" + lnk + "
-
-点确定复制链接")) {
+    if (confirm("已为「" + name + "」开启投票！\n\n专属链接：\n" + lnk + "\n\n点确定复制链接")) {
       navigator.clipboard.writeText(lnk).catch(() => {});
       showToast("链接已复制");
     }
