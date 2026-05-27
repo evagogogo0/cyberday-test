@@ -127,6 +127,21 @@ tbody tr.row-blocked td{background:#FFF8F8 !important}
 .btn-cancel{background:#fff;color:var(--text)}
 .btn-confirm{background:var(--navy);color:#fff;border-color:var(--navy)}
 
+/* ======== SURVEY ======== */
+.survey-body{padding:20px 16px}
+.survey-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px}
+.survey-card h2{font-size:16px;font-weight:600;margin-bottom:8px}
+.survey-card .sub{font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:16px}
+.survey-ta{width:100%;min-height:120px;border:1.5px solid var(--border);border-radius:12px;padding:12px 14px;font-size:14px;font-family:inherit;color:var(--text);resize:none;line-height:1.6}
+.survey-ta:focus{outline:none;border-color:var(--blue)}
+.char-count{font-size:11px;color:var(--muted);text-align:right;margin-top:4px;margin-bottom:14px}
+.char-count.warn{color:var(--amber)}
+.char-count.over{color:var(--red)}
+.survey-btns{display:flex;gap:10px}
+.survey-btns .skip{flex:1;height:46px;border-radius:12px;border:1.5px solid var(--border);background:#fff;color:var(--muted);font-size:14px;font-weight:500;cursor:pointer;font-family:inherit}
+.survey-btns .submit{flex:2;height:46px;border-radius:12px;border:none;background:var(--navy);color:#fff;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit}
+.survey-btns .submit:disabled{background:#C8C6BE;cursor:not-allowed}
+
 /* ======== ADMIN ======== */
 .admin-top{background:var(--navy);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;position:sticky;top:0;z-index:50}
 .admin-top h1{font-size:14px;font-weight:600;color:#fff}
@@ -226,6 +241,23 @@ tbody tr.row-blocked td{background:#FFF8F8 !important}
     </div>
     <div id="ci-sel" style="display:none;margin-bottom:12px"><div class="tag-inp"><span id="ci-sel-txt"></span></div></div>
     <button class="btn btn-primary" id="ci-btn" disabled onclick="doCheckin()">确认签到</button>
+  </div>
+</div>
+
+<!-- ===== 问卷页 ===== -->
+<div id="survey-page" class="page">
+  <div class="topbar"><h1>Cyberday · 签到</h1><p>AI 课题月度成果展示 · 2026.05.28</p></div>
+  <div class="survey-body">
+    <div class="survey-card">
+      <h2>分享你的想法</h2>
+      <p class="sub">对于 AI 应用实践，或公司正在推行的 AI 应用工程，你有什么想法？</p>
+      <textarea class="survey-ta" id="survey-input" maxlength="200" placeholder="请在此输入你的想法（最多 200 字）…" oninput="onSurveyInput()"></textarea>
+      <div class="char-count" id="char-count">0 / 200</div>
+      <div class="survey-btns">
+        <button class="skip" onclick="skipSurvey()">跳过</button>
+        <button class="submit" id="survey-submit" onclick="submitSurvey()">提交想法</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -380,6 +412,7 @@ tbody tr.row-blocked td{background:#FFF8F8 !important}
       <button class="atab" onclick="switchTab(1)">课题组管理</button>
       <button class="atab" onclick="switchTab(2)">签到记录</button>
       <button class="atab" onclick="switchTab(3)">评比结果</button>
+      <button class="atab" onclick="switchTab(4)">问卷回复</button>
     </div>
 
     <!-- Tab 0: 投票者管理 -->
@@ -437,7 +470,7 @@ tbody tr.row-blocked td{background:#FFF8F8 !important}
           <span class="meta">开启「入围」后该组出现在投票表中</span>
         </div>
         <div style="overflow-x:auto"><table class="atable">
-          <thead><tr><th>#</th><th>课题组名称</th><th>主讲人</th><th>所属部门</th><th>入围现场</th><th>操作</th></tr></thead>
+          <thead><tr><th>#</th><th>课题组名称</th><th>主讲人</th><th>类别</th><th>所属部门</th><th>入围现场</th><th>操作</th></tr></thead>
           <tbody id="ptb"></tbody>
         </table></div>
         <div class="add-form">
@@ -490,6 +523,20 @@ tbody tr.row-blocked td{background:#FFF8F8 !important}
       </div>
     </div>
 
+    <!-- Tab 4: 问卷回复 -->
+    <div id="tab-4" style="display:none">
+      <div class="sec">
+        <div class="sec-head">
+          <h2>问卷回复</h2>
+          <span class="meta" id="survey-count"></span>
+        </div>
+        <div style="overflow-x:auto"><table class="atable">
+          <thead><tr><th>#</th><th>姓名</th><th>提交时间</th><th style="min-width:400px">想法内容</th></tr></thead>
+          <tbody id="svtb"></tbody>
+        </table></div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -503,7 +550,7 @@ tbody tr.row-blocked td{background:#FFF8F8 !important}
 const SUPA_URL = "https://mxvgewpeuqxrygpcjeum.supabase.co";
 const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im14dmdld3BldXF4cnlncGNqZXVtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk2OTMwODksImV4cCI6MjA5NTI2OTA4OX0.Y5F4YJpQ5vHEcPZc50J8xZM10iMGuvLfXc5_0qNpcO4";
 const ADMIN_KEY = "cyberday2026may";
-const BASE_URL  = "https://cyberdata.cyberway.com.cn/cyberday-may2026-system.html"; // ← 部署后替换
+const BASE_URL  = "https://cyberday-test.vercel.app/cyberday-may2026-system.html";
 
 const DIMS = 8;
 const MAX_VOTES = 5;
@@ -519,7 +566,7 @@ let voter = null;
 let vProjects = []; // 当前投票者可见的课题组（入围+非本部门屏蔽）
 let dots = [], votes = [], cmts = [];
 let saveTimer = null;
-let aVoters = [], aScores = [], aAttend = [], aProjects = [];
+let aVoters = [], aScores = [], aAttend = [], aProjects = [], aSurveys = [];
 let curTab = 0;
 
 // =============================================
@@ -583,22 +630,61 @@ async function doCheckin() {
     });
   }
   const t = new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
-  if (!isVoter) {
-    $("ci-ok-name").textContent = ciSel + " 签到成功";
-    $("ci-ok-time").textContent = "签到时间：" + t;
+  // 先存签到状态，进问卷页
+  window._ciResult = { isVoter, vData, name: ciSel, time: t };
+  $("survey-input").value = "";
+  $("char-count").textContent = "0 / 200";
+  $("char-count").className = "char-count";
+  showPage("survey-page");
+}
+
+// =============================================
+// SURVEY 问卷
+// =============================================
+window.onSurveyInput = function() {
+  const v = $("survey-input").value;
+  const len = v.length;
+  const cc = $("char-count");
+  cc.textContent = len + " / 200";
+  cc.className = "char-count" + (len >= 200 ? " over" : len >= 160 ? " warn" : "");
+};
+
+async function afterSurvey() {
+  const r = window._ciResult;
+  if (!r) { showPage("checkin-page"); return; }
+  if (!r.isVoter) {
+    $("ci-ok-name").textContent = r.name + " 签到成功";
+    $("ci-ok-time").textContent = "签到时间：" + r.time;
     showPage("ci-ok-page");
-  } else if (!vData.can_vote) {
-    $("ci-pending-name").textContent = ciSel + " 签到成功";
-    window._pendingName = ciSel;
+  } else if (!r.vData || !r.vData.can_vote) {
+    $("ci-pending-name").textContent = r.name + " 签到成功";
+    window._pendingName = r.name;
     showPage("ci-pending-page");
   } else {
-    $("voter-ci-name").textContent = ciSel;
-    const lnk = BASE_URL + "?token=" + vData.token;
+    $("voter-ci-name").textContent = r.name;
+    const lnk = BASE_URL + "?token=" + r.vData.token;
     $("voter-link-a").href = lnk; $("voter-link-a").textContent = lnk;
     window._vLink = lnk;
     showPage("voter-ci-page");
   }
 }
+
+window.skipSurvey = function() { afterSurvey(); };
+
+window.submitSurvey = async function() {
+  const text = $("survey-input").value.trim();
+  if (!text) { afterSurvey(); return; }
+  const btn = $("survey-submit"); btn.disabled = true; btn.textContent = "提交中…";
+  const r = window._ciResult;
+  try {
+    await sb.from("survey_responses_may").insert({
+      name: r ? r.name : "匿名",
+      response: text,
+      created_at: new Date().toISOString()
+    });
+  } catch(e) { console.log("survey save:", e); }
+  afterSurvey();
+};
 
 // 检查投票资格是否已开启（等待页点击）
 window.checkVoteReady = async function() {
@@ -673,7 +759,7 @@ function buildVoteTable() {
       <td class="td-proj">
         <div class="pnum">${String(i + 1).padStart(2, "0")}</div>
         <div class="pname">${proj.name}</div>
-        ${proj.presenter ? `<div style="font-size:9px;color:var(--muted);margin-top:2px">${proj.presenter}</div>` : ''}
+        ${proj.presenter ? `<div style="font-size:9px;color:var(--muted);margin-top:1px">${proj.presenter}${proj.category ? ' · <span style="color:#888">' + proj.category + '</span>' : ''}</div>` : ''}
         ${blocked ? '<span class="blocked-tag">本部门 · 不可投</span>' : ''}
       </td>
       ${Array(DIMS).fill(0).map((_, d) => `<td class="td-dim"><div class="dot${dots[i][d] ? " on" : ""}" id="dot${i}_${d}" onclick="tgDot(${i},${d})"></div></td>`).join("")}
@@ -738,7 +824,7 @@ window.doSubmitVote = async () => {
 function switchTab(n) {
   curTab = n;
   document.querySelectorAll(".atab").forEach((t, i) => t.classList.toggle("active", i === n));
-  ["tab-0", "tab-1", "tab-2", "tab-3"].forEach((id, i) => $(id).style.display = i === n ? "block" : "none");
+  ["tab-0", "tab-1", "tab-2", "tab-3", "tab-4"].forEach((id, i) => $(id).style.display = i === n ? "block" : "none");
 }
 
 async function initAdmin() {
@@ -747,14 +833,15 @@ async function initAdmin() {
 }
 
 window.doLoadAll = async () => {
-  const [{ data: voters }, { data: scores }, { data: attend }, { data: projs }] = await Promise.all([
+  const [{ data: voters }, { data: scores }, { data: attend }, { data: projs }, { data: surveys }] = await Promise.all([
     sb.from("voters_may").select("*").order("created_at"),
     sb.from("scores_may").select("*"),
     sb.from("attendees_may").select("*").order("checkin_at", { ascending: false }),
-    sb.from("projects_may").select("*").order("display_order")
+    sb.from("projects_may").select("*").order("display_order"),
+    sb.from("survey_responses_may").select("*").order("created_at", { ascending: false })
   ]);
-  aVoters = voters || []; aScores = scores || []; aAttend = attend || []; aProjects = projs || [];
-  renderStats(); renderVoters(); renderProjects(); renderAttend(); renderResults();
+  aVoters = voters || []; aScores = scores || []; aAttend = attend || []; aProjects = projs || []; aSurveys = surveys || [];
+  renderStats(); renderVoters(); renderProjects(); renderAttend(); renderResults(); renderSurveys();
   $("ref-time").textContent = "刷新于 " + new Date().toLocaleTimeString("zh-CN");
 };
 
@@ -839,18 +926,25 @@ async function addVoter() {
 }
 
 function renderProjects() {
-  $("ptb").innerHTML = aProjects.map((p, i) => `<tr>
-    <td style="color:var(--muted)">${i + 1}</td>
-    <td style="font-weight:500;font-size:12px">${p.name}</td>
-    <td style="font-size:11px;color:var(--muted)">${p.presenter || "—"}</td>
-    <td style="font-size:11px">${p.department || "—"}</td>
-    <td><span class="badge ${p.qualified ? 'qualified' : 'unqualified'}">${p.qualified ? '✓ 入围' : '未入围'}</span></td>
-    <td>
-      <button class="smBtn ${p.qualified ? 'danger' : 'save'}" onclick="toggleQualified(${p.id},${!p.qualified})">
-        ${p.qualified ? '取消入围' : '设为入围'}
-      </button>
-    </td>
-  </tr>`).join("");
+  const catColor = { "需求类":"#E6F1FB", "开发类":"#E1F5EE", "测试类":"#FAEEDA", "运维类":"#EEEDFE", "数据类":"#F1EFE8" };
+  const catText  = { "需求类":"#0C447C", "开发类":"#085041", "测试类":"#633806", "运维类":"#3C3489", "数据类":"#444441" };
+  $("ptb").innerHTML = aProjects.map((p, i) => {
+    const cat = p.category || "";
+    const catStyle = cat ? `background:${catColor[cat]||"#F1EFE8"};color:${catText[cat]||"#444"};padding:1px 7px;border-radius:4px;font-size:10px;font-weight:500` : "";
+    return `<tr>
+      <td style="color:var(--muted)">${i + 1}</td>
+      <td style="font-weight:500;font-size:12px">${p.name}</td>
+      <td style="font-size:11px;color:var(--muted)">${p.presenter || "—"}</td>
+      <td><span style="${catStyle}">${cat || "—"}</span></td>
+      <td style="font-size:11px">${p.department || "—"}</td>
+      <td><span class="badge ${p.qualified ? 'qualified' : 'unqualified'}">${p.qualified ? '✓ 入围' : '未入围'}</span></td>
+      <td>
+        <button class="smBtn ${p.qualified ? 'danger' : 'save'}" onclick="toggleQualified(${p.id},${!p.qualified})">
+          ${p.qualified ? '取消入围' : '设为入围'}
+        </button>
+      </td>
+    </tr>`;
+  }).join("");
 }
 
 async function toggleQualified(id, val) {
@@ -980,6 +1074,20 @@ function copyLink(url) {
   navigator.clipboard.writeText(url).catch(() => {});
   const t = $("copy-toast"); t.classList.add("show");
   setTimeout(() => t.classList.remove("show"), 2000);
+}
+
+function renderSurveys() {
+  $("survey-count").textContent = aSurveys.length + " 条回复";
+  if (!aSurveys.length) {
+    $("svtb").innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:20px">暂无问卷回复</td></tr>';
+    return;
+  }
+  $("svtb").innerHTML = aSurveys.map((s, i) => `<tr>
+    <td style="color:var(--muted)">${i + 1}</td>
+    <td style="font-weight:500;white-space:nowrap">${s.name || "—"}</td>
+    <td style="font-size:11px;color:var(--muted);white-space:nowrap">${s.created_at ? new Date(s.created_at).toLocaleString("zh-CN") : "—"}</td>
+    <td style="font-size:12px;line-height:1.6">${s.response || ""}</td>
+  </tr>`).join("");
 }
 
 window.doExport = () => {
