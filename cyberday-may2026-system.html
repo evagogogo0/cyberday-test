@@ -614,28 +614,37 @@ function selCI(name) {
 }
 async function doCheckin() {
   if (!ciSel) return;
-  const btn = $("ci-btn"); btn.disabled = true; btn.textContent = "签到中…";
-  // 查是否已经签到
-  const { data: ex } = await sb.from("attendees_may").select("*").eq("name", ciSel).limit(1);
-  // 查是否在投票者表
-  const { data: vRow } = await sb.from("voters_may").select("*").eq("name", ciSel).limit(1);
-  const isVoter = !!(vRow && vRow.length);
-  const vData = isVoter ? vRow[0] : null;
-  const now = new Date().toISOString();
-  if (!ex || !ex.length) {
-    await sb.from("attendees_may").insert({
-      name: ciSel, checkin_at: now,
-      is_voter: isVoter,
-      voter_token: vData ? vData.token : null
-    });
+  try {
+    const btn = $("ci-btn"); btn.disabled = true; btn.textContent = "签到中…";
+    const { data: ex } = await sb.from("attendees_may").select("*").eq("name", ciSel).limit(1);
+    const { data: vRow } = await sb.from("voters_may").select("*").eq("name", ciSel).limit(1);
+    const isVoter = !!(vRow && vRow.length);
+    const vData = isVoter ? vRow[0] : null;
+    const now = new Date().toISOString();
+    if (!ex || !ex.length) {
+      await sb.from("attendees_may").insert({
+        name: ciSel, checkin_at: now,
+        is_voter: isVoter,
+        voter_token: vData ? vData.token : null
+      });
+    }
+    const t = new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
+    window._ciResult = { isVoter, vData, name: ciSel, time: t };
+    // 重置问卷页状态
+    document.getElementById("survey-input").value = "";
+    document.getElementById("char-count").textContent = "0 / 200";
+    document.getElementById("char-count").className = "char-count";
+    document.getElementById("survey-submit").disabled = false;
+    document.getElementById("survey-submit").textContent = "提交想法";
+    // 跳转到问卷页
+    document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+    document.getElementById("survey-page").classList.add("active");
+    document.getElementById("loading").style.display = "none";
+  } catch(err) {
+    console.error("doCheckin error:", err);
+    alert("签到失败，请重试：" + err.message);
+    const btn = $("ci-btn"); if(btn){ btn.disabled = false; btn.textContent = "确认签到"; }
   }
-  const t = new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
-  // 先存签到状态，进问卷页
-  window._ciResult = { isVoter, vData, name: ciSel, time: t };
-  $("survey-input").value = "";
-  $("char-count").textContent = "0 / 200";
-  $("char-count").className = "char-count";
-  showPage("survey-page");
 }
 
 // =============================================
